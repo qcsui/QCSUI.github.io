@@ -31,8 +31,8 @@
           <span class="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full font-medium">已录用 &middot; ECCE 2026</span>
         </div>
         <p class="text-neutral-500 text-lg">
-          一个多智能体 LLM 框架,可自动生成基于 FPGA 的电力电子实时仿真器 &mdash;&mdash;
-          从一份电路拓扑,直接得到经过验证、可部署的硬件在环(HIL)求解器,不需要 HDL 经验。
+          用多智能体 LLM 自动生成基于 FPGA 的电力电子实时仿真器:给一份电路拓扑,
+          直接产出验证过、能部署的硬件在环(HIL)求解器,不用懂 HDL。
         </p>
 
         <!-- Authors -->
@@ -89,16 +89,15 @@
       <section class="flex flex-col gap-3">
         <h2>问题在哪</h2>
         <p>
-          现代功率变换器的开关频率已经到了几十甚至几百 kHz,暂态过程发生在纳秒量级。
-          要在硬件在环(HIL)仿真里如实还原这些行为,就必须以亚微秒级的步长、并且是确定性地
-          推进模型 &mdash;&mdash; 这件事目前只有 FPGA 能稳定做到。
+          现在的功率变换器,开关频率动辄几十上百 kHz,暂态过程压缩在纳秒量级。
+          HIL 仿真想把这些行为如实跑出来,步长就得压到亚微秒,而且每一步的时间必须是确定的。
+          这个要求目前只有 FPGA 扛得住。
         </p>
         <p>
-          麻烦在于:把电路的连续时间物理模型手工翻译成定点、流水化的 Verilog,
-          是一项专门的硬件设计技能,而大多数电力电子工程师并不具备。
-          本来可以帮忙的 AI 代码生成工具 &mdash;&mdash; 比如 VerilogCoder 这类框架 &mdash;&mdash;
-          只理解离散数字逻辑,对连续物理、数值稳定性,以及 HIL 求解器必须满足的硬实时约束
-          没有任何概念。
+          但 FPGA 这条路不好走。把电路的连续时间模型手写成定点、流水化的 Verilog,
+          这是数字设计的活,大多数做电力电子的人并不熟。指望 AI 帮忙也有问题:
+          VerilogCoder 这类代码生成框架眼里只有离散数字逻辑,既不懂连续物理,
+          也不管数值稳不稳定,更不知道 HIL 求解器头上还压着硬实时约束。
         </p>
       </section>
 
@@ -106,11 +105,10 @@
       <section class="flex flex-col gap-3">
         <h2>思路</h2>
         <p>
-          Agentic HIL 把这件事拆给三个协作的 LLM 智能体。<strong>Physics Agent</strong>
-          把电路拓扑转成离散化、定点化的状态空间模型;<strong>Hardware Agent</strong>
-          把这个模型映射成扁平化、低延迟的 Verilog 并推进综合;<strong>Debug Agent</strong>
-          则把综合后 RTL 的仿真波形与 Physics Agent 自己的浮点参考做对比,
-          自动修复定点数据通路,直到两者吻合。
+          Agentic HIL 把这件事拆给三个 LLM 智能体分工。<strong>Physics Agent</strong>
+          负责把电路拓扑推成状态空间方程,做离散化和定点量化;<strong>Hardware Agent</strong>
+          把模型映射成扁平、低延迟的 Verilog,再送去综合;<strong>Debug Agent</strong>
+          拿综合后 RTL 的仿真波形跟浮点参考对,发现对不上就自己去改定点数据通路,改到吻合为止。
         </p>
         <div class="flex items-stretch justify-center gap-1.5 flex-wrap py-2">
           <div class="w-36 bg-neutral-50 border border-black/5 rounded-lg p-2.5 text-xs flex flex-col gap-1">
@@ -144,8 +142,7 @@
       <section class="flex flex-col gap-3">
         <h2>它具体能做什么</h2>
         <p>
-          上面三个智能体各自负责的事情都很具体,而且单独拎出来靠人手工做都相当繁琐。
-          点开每个标签,看看它们实际自动化掉了什么。
+          这三件事单独拿出来,哪一件靠人手工做都够折腾。点开下面几个标签,看看具体自动化掉了什么。
         </p>
 
         <div class="flex gap-1.5 flex-wrap not-prose" id="capability-tabs">
@@ -163,10 +160,9 @@
           <div class="capability-panel flex flex-col gap-2" data-cap="1">
             <h3 class="font-medium text-lg">自动搜索定点格式</h3>
             <p class="text-sm leading-relaxed text-neutral-700">
-              Physics Agent 对每个状态变量做静态范围分析 &mdash;&mdash; 比如电感电流可能达到的最大值
-              &mdash;&mdash; 然后挑出既不溢出、又不浪费精度的最小 Q 格式位宽。
-              工程师原本要花几个小时手算定标,现在变成一次自动搜索,
-              而且电路参数一改就会自动重跑。
+              Physics Agent 会对每个状态变量做静态范围分析,比如电感电流最大能冲到多少,
+              然后挑一个既不溢出、又不浪费精度的 Q 格式。这活儿以前得工程师拿计算器手算定标,
+              算大半天;现在是一次自动搜索,电路参数一改就重算一遍。
             </p>
             <div class="flex items-center gap-1.5 flex-wrap text-xs">
               <span class="bg-white border border-black/5 px-2 py-1 rounded-md">Output: model_fixed.c (Golden Reference)</span>
@@ -176,8 +172,8 @@
             <!-- Interactive: Q-format explorer -->
             <div id="qformat-widget" class="bg-white border border-black/5 rounded-lg p-3 flex flex-col gap-2.5 mt-1">
               <p class="text-xs text-neutral-500">
-                动手试试:总共 32 位,拖动滑块改变整数位和小数位的分配。
-                信号必须装得进量程,剩下的位宽全部换成分辨率。
+                试一下:一共 32 位,拖滑块调整数位和小数位怎么分。
+                信号得装得进量程,剩下的位宽全换成分辨率。
               </p>
               <div class="flex items-center gap-3 flex-wrap">
                 <input type="range" id="qformat-slider" min="2" max="16" value="6" step="1" class="flex-1 min-w-40" />
@@ -195,7 +191,7 @@
               </div>
               <div class="flex flex-col gap-1">
                 <div class="flex items-center justify-between text-[0.65rem] text-neutral-400">
-                  <span>信号峰值(启动过冲 22.5 V)与可表示量程之比</span>
+                  <span>信号峰值(启动过冲 22.5 V)占可表示量程的比例</span>
                 </div>
                 <div class="w-full h-2 rounded-full bg-neutral-100 overflow-hidden">
                   <div id="qformat-bar" class="h-full rounded-full transition-all duration-150" style="width: 70%; background-color: #3b82f6;"></div>
@@ -207,11 +203,9 @@
           <div class="capability-panel hidden flex-col gap-2" data-cap="2">
             <h3 class="font-medium text-lg">波形驱动的自动调试</h3>
             <p class="text-sm leading-relaxed text-neutral-700">
-              不用人盯着 VCD 波形一行行看,Debug Agent 会把综合后 RTL 的仿真输出
-              和 Physics Agent 自己的浮点参考做对比。一旦 RMSE 突然变大 &mdash;&mdash;
-              这通常意味着移位没对齐、漏了符号扩展,或者寄存器发生了回绕溢出 &mdash;&mdash;
-              它就沿着 Verilog 的抽象语法树往回追,定位到出问题的那个算术节点,
-              然后自动改写数据通路的定义。
+              不用人对着 VCD 波形一格一格看。Debug Agent 直接拿 RTL 的仿真输出跟浮点参考比,
+              RMSE 一旦突然变大,基本就是移位没对齐、符号扩展漏了,或者寄存器回绕溢出这几种情况。
+              它顺着 Verilog 的抽象语法树往回追,定位到出问题的那个算术节点,把数据通路的定义改掉。
             </p>
             <div class="flex items-center gap-1.5 flex-wrap text-xs">
               <span class="bg-white border border-black/5 px-2 py-1 rounded-md">Checks: RMSE vs. golden reference</span>
@@ -221,10 +215,10 @@
           <div class="capability-panel hidden flex-col gap-2" data-cap="3">
             <h3 class="font-medium text-lg">以延迟为先的架构优化</h3>
             <p class="text-sm leading-relaxed text-neutral-700">
-              常规的数字设计智能体习惯用深流水线去堆吞吐量 &mdash;&mdash;
-              这对 HIL 求解器恰恰是反的:这里要压的是 t<sub>calc</sub>,不是把时钟频率拉高。
-              Hardware Agent 的做法是把相互独立的状态方程映射到并行的 DSP 单元上,
-              并让数据通路保持扁平的组合逻辑,从而把延迟压到远小于实时步长 &Delta;t。
+              做数字设计的习惯是拿深流水线堆吞吐量,但 HIL 求解器要的恰恰相反:
+              要压的是单步延迟 t<sub>calc</sub>,不是把主频拉高。所以 Hardware Agent 反着来,
+              把彼此独立的状态方程摊到并行 DSP 上,数据通路尽量保持扁平的组合逻辑,
+              把延迟压到远小于步长 &Delta;t。
             </p>
             <div class="flex items-center gap-1.5 flex-wrap text-xs">
               <span class="bg-white border border-black/5 px-2 py-1 rounded-md">t<sub>calc</sub> &lt; 10 ns</span>
@@ -235,7 +229,7 @@
             <!-- Interactive: real-time budget -->
             <div id="budget-widget" class="bg-white border border-black/5 rounded-lg p-3 flex flex-col gap-2.5 mt-1">
               <p class="text-xs text-neutral-500">
-                动手试试:你的变换器需要多细的时间步长?10&nbsp;ns 的数据通路还塞得进去吗?
+                试一下:你的变换器需要多细的步长?10&nbsp;ns 的数据通路还塞得下吗?
               </p>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                 <label class="flex flex-col gap-1">
@@ -261,7 +255,7 @@
                 <div id="budget-bar" class="w-full h-2.5 rounded-full bg-neutral-100 overflow-hidden">
                   <div id="budget-fill" class="h-full rounded-full transition-all duration-150" style="width: 20%; background-color: #22c55e;"></div>
                 </div>
-                <div class="text-[0.65rem] text-neutral-400">填充部分 = 生成的数据通路所需的 10 ns</div>
+                <div class="text-[0.65rem] text-neutral-400">填色部分是数据通路占掉的 10 ns</div>
               </div>
               <p id="budget-verdict" class="text-xs"></p>
             </div>
@@ -269,9 +263,9 @@
           <div class="capability-panel hidden flex-col gap-2" data-cap="4">
             <h3 class="font-medium text-lg">自动时序闭环</h3>
             <p class="text-sm leading-relaxed text-neutral-700">
-              框架会循环驱动 Xilinx Vivado:综合、把关键路径和 &Delta;t 做比较,
-              一旦时序不满足,就重新安排并行结构,而不是无脑加流水级 &mdash;&mdash;
-              后者只会把延迟问题重新引回来。这个循环会一直迭代,直到时序收敛并留有余量。
+              框架自己循环调 Vivado:综合完看关键路径够不够 &Delta;t,不够就重新排并行结构。
+              注意它不会无脑加流水级,那样只会把延迟问题又请回来。
+              这个循环一直跑到时序收敛、并且还留有余量为止。
             </p>
             <div class="flex items-center gap-1.5 flex-wrap text-xs">
               <span class="bg-white border border-black/5 px-2 py-1 rounded-md">4.28% LUT</span>
@@ -286,7 +280,7 @@
       <section class="flex flex-col gap-3">
         <h2>你需要准备什么</h2>
         <p>
-          建模、写代码、调试这些事交给智能体,但工具链和目标硬件还是得你来准备:
+          建模、写代码、调试这些交给智能体,但工具链和硬件还是得你自己备齐:
         </p>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 not-prose">
           <div class="bg-neutral-50 border border-black/5 rounded-lg p-3 flex gap-2.5 items-start">
@@ -300,7 +294,7 @@
             <span class="size-6 shrink-0 rounded-full bg-blue-500 text-white text-xs font-medium flex items-center justify-center">2</span>
             <div class="flex flex-col gap-0.5">
               <span class="font-medium text-sm">LLM API 权限</span>
-              <span class="text-xs text-neutral-500">Physics / Hardware / Debug 三个智能体本身就是 LLM 驱动的</span>
+              <span class="text-xs text-neutral-500">Physics / Hardware / Debug 三个智能体本身都靠 LLM 跑</span>
             </div>
           </div>
           <div class="bg-neutral-50 border border-black/5 rounded-lg p-3 flex gap-2.5 items-start">
@@ -314,7 +308,7 @@
             <span class="size-6 shrink-0 rounded-full bg-blue-500 text-white text-xs font-medium flex items-center justify-center">4</span>
             <div class="flex flex-col gap-0.5">
               <span class="font-medium text-sm">iverilog / yosys</span>
-              <span class="text-xs text-neutral-500">开源 RTL 仿真,用于 AST 波形回溯那一步</span>
+              <span class="text-xs text-neutral-500">开源 RTL 仿真,AST 波形回溯那步要用</span>
             </div>
           </div>
           <div class="bg-neutral-50 border border-black/5 rounded-lg p-3 flex gap-2.5 items-start">
@@ -328,14 +322,14 @@
             <span class="size-6 shrink-0 rounded-full bg-blue-500 text-white text-xs font-medium flex items-center justify-center">6</span>
             <div class="flex flex-col gap-0.5">
               <span class="font-medium text-sm">目标 FPGA 板卡 + 用户手册</span>
-              <span class="text-xs text-neutral-500">比如 Zynq-7020 板卡 &mdash;&mdash; 手册用于引脚映射和时钟配置</span>
+              <span class="text-xs text-neutral-500">比如 Zynq-7020 板卡,手册用来查引脚映射和时钟配置</span>
             </div>
           </div>
           <div class="bg-neutral-50 border border-black/5 rounded-lg p-3 flex gap-2.5 items-start sm:col-span-2">
             <span class="size-6 shrink-0 rounded-full bg-blue-500 text-white text-xs font-medium flex items-center justify-center">7</span>
             <div class="flex flex-col gap-0.5">
               <span class="font-medium text-sm">DAC/ADC 子板 + 用户手册</span>
-              <span class="text-xs text-neutral-500">只有当你要用真实模拟 I/O 闭环、而不只是跑 RTL 仿真时才需要</span>
+              <span class="text-xs text-neutral-500">只跑 RTL 仿真用不上,要接真实模拟 I/O 闭环才需要</span>
             </div>
           </div>
         </div>
@@ -343,17 +337,17 @@
 
       <!-- Why DCM matters -->
       <section class="flex flex-col gap-3">
-        <h2>为什么必须把物理放进环里</h2>
+        <h2>语法对了,物理不一定对</h2>
         <p>
-          下面这个失效模式,正是"这是个物理问题,而不是代码生成问题"的原因。
-          这里是 Buck 变换器的状态空间模型,用和生成的 RTL 完全相同的前向欧拉格式、
-          50&nbsp;ns 步长,在你的浏览器里实时积分出来的。
+          下面这个例子能说明,为什么这是个物理问题,不是写代码的问题。
+          这里跑的就是 Buck 的状态空间模型,前向欧拉、50&nbsp;ns 步长,
+          跟生成的 RTL 用的是同一套,在你浏览器里实时算出来。
         </p>
         <p>
-          把 <em>DCM 处理</em> 关掉,盯住电感电流:求解器会一路积分穿过零点,
-          算出一个二极管在物理上根本不允许的负电流。从这一刻起后面的波形全是错的,
-          而 Verilog 在语法上挑不出任何毛病 &mdash;&mdash;
-          这正是只盯着布尔正确性的智能体抓不住它的原因。
+          把下面的 <em>DCM 处理</em> 关掉,盯着电感电流看:求解器会一路积分穿过零点,
+          算出一个负电流。可实际电路里,二极管根本不让电流倒着流。
+          从这里开始,后面的波形全废了,而 Verilog 语法上一点毛病都挑不出来。
+          只盯布尔正确性的智能体,就是栽在这种地方。
         </p>
 
         <div id="buck-widget" class="bg-neutral-50 border border-black/5 rounded-lg p-4 flex flex-col gap-3 not-prose">
@@ -399,20 +393,19 @@
             </label>
           </div>
           <p class="text-[0.7rem] text-neutral-400">
-            V<sub>in</sub> = 24 V,f<sub>sw</sub> = 20 kHz,&Delta;t = 50 ns,前向欧拉 &mdash;&mdash;
-            浏览器内实时计算,每次重绘约 60,000 步积分。
+            V<sub>in</sub> = 24 V,f<sub>sw</sub> = 20 kHz,&Delta;t = 50 ns,前向欧拉。
+            浏览器内实时计算,每拖一次滑块重算约 60,000 步。
           </p>
         </div>
       </section>
 
       <!-- See it in action -->
       <section class="flex flex-col gap-3">
-        <h2>看看实际跑起来的样子</h2>
+        <h2>实际跑一遍</h2>
         <p>
-          下面就是前面说的那条流水线,在回放一次异步 Buck 变换器的真实运行。
-          点 Run Simulation &mdash;&mdash; 里面每一个数字、每一行日志、每一条波形
-          都是真实的综合/仿真数据,不是摆样子的。
-          (仪表盘界面保持英文,和真实 EDA 工具一致。)
+          下面是前面那条流水线跑一次异步 Buck 的完整回放,点 Run Simulation 就行。
+          里面的数字、日志、波形都来自真实的综合和仿真结果,不是摆样子的占位数据。
+          (仪表盘沿用英文界面,跟实际 EDA 工具保持一致。)
         </p>
 
         <div class="border border-black/5 rounded-lg overflow-hidden not-prose" style="height: 760px;">
@@ -765,10 +758,11 @@
       <section class="flex flex-col gap-3">
         <h2>结果</h2>
         <p>
-          在一台异步 Buck 变换器上验证(24V &rarr; 12V,20 kHz,并且是特意配置成进入断续导通模式)。
-          智能体生成的 RTL 以 Q6.26 定点格式跑在 Zynq-7020 上,稳态下与离线浮点 PLECS 参考的偏差
-          只有 16.77&nbsp;mV(&lt;0.15%),LUT 占用仅 4.28%,每次状态更新在 10&nbsp;ns 内完成
-          &mdash;&mdash; 相对 50&nbsp;ns 的实时预算留有充足余量。
+          验证平台是一台异步 Buck(24V 降 12V,20 kHz),参数是特意挑的,
+          好让它工作在断续导通模式。智能体生成的 RTL 用 Q6.26 定点跑在 Zynq-7020 上,
+          稳态下跟离线浮点 PLECS 参考只差 16.77&nbsp;mV,相对误差不到 0.15%。
+          资源上只占了 4.28% 的 LUT,单步状态更新 10&nbsp;ns 以内完成,
+          离 50&nbsp;ns 的实时预算还差得远。
         </p>
         <figure class="flex flex-col gap-2 not-prose">
           <img src="/agentic-hil/buck_waveform_comparison.png"
@@ -783,7 +777,7 @@
               <span class="inline-block w-4 h-0.5" style="background-color: #3b82f6;"></span>
               智能体生成的定点 RTL
             </span>
-            <span class="text-neutral-400">&mdash;&mdash; 本页所有图表都使用同一套配色。</span>
+            <span class="text-neutral-400">本页所有图表统一用这套配色。</span>
           </figcaption>
         </figure>
       </section>
@@ -802,18 +796,18 @@
         unitNano: 'nV / nA',
         unitMicro: 'µV / µA',
         unitMilli: 'mV / mA',
-        qfOverflow: '会溢出 —— 量程只到 ±{range} V,但启动暂态会冲到 {peak} V',
-        qfWasteful: '不会溢出,但余量是实际需要的 {factor} 倍 —— 这些位宽本可以换成分辨率',
-        qfFits: '量程刚好覆盖信号,余量合理',
-        buckAxis: '时间 → (3 个开关周期,稳态)',
+        qfOverflow: '溢出了。量程只到 ±{range} V,可启动时要冲到 {peak} V',
+        qfWasteful: '够用,但余量开到了实际需要的 {factor} 倍,这些位宽拿去换分辨率更划算',
+        qfFits: '量程够用,余量也不浪费',
+        buckAxis: '时间 →(稳态,3 个开关周期)',
         buckNegative:
-          '电感电流跌到了 {min} A —— 物理上不可能。二极管会阻断反向电流,而时不变的状态空间模型并不知道这件事。',
+          '电感电流跑到了 {min} A,实际电路里不可能:二极管会挡住反向电流。时不变的状态空间模型不知道这回事。',
         buckDcm:
-          '断续导通(DCM):电流触零后被钳位在零,直到开关再次导通。这正是智能体必须识别并建模的模式。',
+          '断续导通(DCM):电流一到零就被钳在零,一直到开关再次导通。这就是智能体得自己认出来并建模的工况。',
         buckCcm:
-          '连续导通(CCM):电流始终不到零,每个开关状态用一组状态空间模型就够了。调大 R 或调小 L 可以把它推进 DCM。',
-        budgetMiss: '赶不上实时 —— 步长比数据通路需要的 {tcalc} ns 还短。',
-        budgetOk: '时序满足,还剩 {slack} ns 余量 —— 用掉了步长预算的 {pct}%。',
+          '连续导通(CCM):电流一直没到零,每个开关状态配一组状态空间方程就够用。想看 DCM 的话,把 R 调大或者 L 调小。',
+        budgetMiss: '跟不上实时了:步长比数据通路要的 {tcalc} ns 还短。',
+        budgetOk: '时序满足,还剩 {slack} ns,步长预算用掉 {pct}%。',
       };
     </script>
     <script src="/agentic-hil/widgets.js"></script>
