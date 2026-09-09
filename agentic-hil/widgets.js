@@ -1,4 +1,4 @@
-// Small interactive widgets for the Agentic HIL article.
+// Small interactive widgets for the Agentic HiL article.
 //
 // Everything here is computed live in the browser from the same equations the
 // paper describes — no canned numbers, no pre-rendered curves:
@@ -16,7 +16,7 @@
   'use strict';
 
   // User-facing strings. A page can override any of these by defining
-  // window.HIL_STRINGS before loading this file — that is how the Chinese
+  // window.HiL_STRINGS before loading this file — that is how the Chinese
   // pages under /zh/ reuse this exact implementation. {placeholders} get
   // filled in with live computed values.
   const DEFAULT_STRINGS = {
@@ -37,7 +37,7 @@
     budgetOk: 'Closes with {slack} ns to spare — {pct}% of the step budget used.',
   };
 
-  const S = Object.assign({}, DEFAULT_STRINGS, window.HIL_STRINGS || {});
+  const S = Object.assign({}, DEFAULT_STRINGS, window.HiL_STRINGS || {});
 
   function t(key, vals) {
     return String(S[key] || '').replace(/\{(\w+)\}/g, (m, k) =>

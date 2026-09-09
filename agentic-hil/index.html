@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="style.css" />
-    <title>Agentic HIL — Qingcheng Sui</title>
+    <title>Agentic HiL — Qingcheng Sui</title>
     <meta name="description"
       content="A multi-agent LLM framework that autonomously generates FPGA-based real-time power electronics simulators. Accepted, ECCE 2026." />
     <link rel="alternate" hreflang="en" href="https://qcsui.github.io/agentic-hil/" />
@@ -27,12 +27,12 @@
           </span>
         </div>
         <div class="flex items-center gap-2 flex-wrap mt-2">
-          <h1 class="text-3xl font-medium">Agentic HIL</h1>
+          <h1 class="text-3xl font-medium">Agentic HiL</h1>
           <span class="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full font-medium">Accepted &middot; ECCE 2026</span>
         </div>
         <p class="text-neutral-500 text-lg">
           A multi-agent LLM framework that autonomously generates FPGA-based real-time power
-          electronics simulators &mdash; from a circuit topology to a verified, deployable HIL
+          electronics simulators &mdash; from a circuit topology to a verified, deployable HiL
           solver, no HDL expertise required.
         </p>
 
@@ -88,34 +88,51 @@
 
       <!-- The problem -->
       <section class="flex flex-col gap-3">
-        <h2>The problem</h2>
+        <h2>Why an agent can write HiL code</h2>
         <p>
           Modern power converters switch at tens to hundreds of kilohertz, with transients that
-          unfold on nanosecond timescales. Capturing that behavior in a hardware-in-the-loop (HIL)
-          simulator means running the model with sub-microsecond time steps, deterministically
-          &mdash; something only an FPGA can reliably do.
+          unfold on nanosecond timescales. To reproduce that faithfully, a hardware-in-the-loop
+          simulator has to advance the model in steps under a microsecond &mdash; and inside that
+          same microsecond it also has to solve the circuit state and drive the DAC/ADC
+          conversion.
         </p>
         <p>
-          The catch is that hand-translating a circuit's continuous-time physics into fixed-point,
-          pipelined Verilog is a specialized hardware-design skill that most power electronics
-          engineers simply don't have. And the AI code-generation tools that could help &mdash;
-          frameworks like VerilogCoder &mdash; only understand discrete digital logic. They have no
-          notion of continuous physics, numerical stability, or the hard real-time timing a HIL
-          solver has to satisfy.
+          Only an FPGA can hold that deadline, which is exactly how commercial
+          hardware-in-the-loop (HiL) equipment does it: discretize the continuous-time model,
+          quantize it to fixed point, write it in Verilog, deploy it on an FPGA. Those machines
+          run from several thousand to a few hundred thousand euros. What you pay for is the
+          software: drag-and-drop modeling, automatic Verilog generation, and no need to know
+          anything about FPGA programming to use the box.
+        </p>
+        <p>So you are pushed into a choice:</p>
+        <ul class="list-disc pl-6 space-y-1 max-w-[44rem] text-neutral-700">
+          <li>buy the commercial HiL simulator &mdash; convenient, but expensive;</li>
+          <li>or work out the modeling and the HDL yourself &mdash; cheap, but it costs you
+            people and time, and it may still come out wrong.</li>
+        </ul>
+        <p>
+          What makes the second path hard: hand-writing a circuit's continuous-time model as
+          fixed-point, pipelined Verilog is digital-design work, and most power electronics
+          engineers don't do it every day. Reaching for AI doesn't immediately help either &mdash;
+          code-generation frameworks like VerilogCoder only see discrete digital logic. They have
+          no notion of continuous physics, they don't track numerical stability, and they don't
+          know a HiL solver has a hard real-time deadline hanging over it.
         </p>
       </section>
 
       <!-- The idea -->
       <section class="flex flex-col gap-3">
-        <h2>The idea</h2>
-        <p>
-          Agentic HIL splits the job across three cooperating LLM agents. A <strong>Physics
-          Agent</strong> turns a circuit topology into a discretized, fixed-point state-space
-          model. A <strong>Hardware Agent</strong> maps that model into flattened, low-latency
-          Verilog and pushes it through synthesis. A <strong>Debug Agent</strong> compares the
-          synthesized RTL's simulated waveform against the Physics Agent's own floating-point
-          reference and automatically repairs the fixed-point datapath until the two match.
-        </p>
+        <h2>Our approach: let the AI do the tedious parts, inside one framework</h2>
+        <p>Agentic HiL splits the job across three cooperating LLM agents:</p>
+        <ul class="list-disc pl-6 space-y-1.5 max-w-[44rem] text-neutral-700">
+          <li><strong>Physics Agent</strong> &mdash; derives the state-space equations from the
+            circuit topology, then discretizes and quantizes them to fixed point.</li>
+          <li><strong>Hardware Agent</strong> &mdash; maps that model into flattened, low-latency
+            Verilog and pushes it through synthesis.</li>
+          <li><strong>Debug Agent</strong> &mdash; compares the synthesized RTL's simulated
+            waveform against the floating-point reference, and when they disagree it goes back and
+            fixes the fixed-point datapath itself, until they match.</li>
+        </ul>
         <div class="flex items-stretch justify-center gap-1.5 flex-wrap py-2">
           <div class="w-36 bg-neutral-50 border border-black/5 rounded-lg p-2.5 text-xs flex flex-col gap-1">
             <span class="font-medium">Input</span>
@@ -139,17 +156,18 @@
           <span class="flow-arrow text-lg" aria-hidden="true">&rarr;</span>
           <div class="w-36 bg-blue-50 border border-blue-200 rounded-lg p-2.5 text-xs flex flex-col gap-1">
             <span class="font-medium">Output</span>
-            <span class="text-neutral-500">Verified HIL simulator</span>
+            <span class="text-neutral-500">Verified HiL simulator</span>
           </div>
         </div>
       </section>
 
       <!-- Capabilities -->
       <section class="flex flex-col gap-3">
-        <h2>Capabilities</h2>
+        <h2>What HiLCoder does</h2>
         <p>
-          Each agent above does something concrete and, on its own, fairly tedious for a human
-          engineer to get right by hand. Click through to see what each one actually automates.
+          The framework in the paper is <em>Agentic HiL</em>; the installable skill that runs it
+          is called <strong>HiLCoder</strong>. Each of the jobs below is slow and fiddly to get
+          right by hand. Click through to see what it actually automates.
         </p>
 
         <div class="flex gap-1.5 flex-wrap not-prose" id="capability-tabs">
@@ -228,7 +246,7 @@
             <h3 class="font-medium text-lg">Latency-first architecture optimization</h3>
             <p class="text-sm leading-relaxed text-neutral-700">
               Conventional digital-design agents chase throughput with deep pipelines &mdash;
-              exactly the wrong instinct for a HIL solver, where the goal is minimizing
+              exactly the wrong instinct for a HiL solver, where the goal is minimizing
               t<sub>calc</sub>, not maximizing clock frequency. The Hardware Agent instead maps
               independent state equations onto parallel DSP blocks and keeps the datapath
               flattened and combinational, so latency stays far below the real-time step
@@ -295,10 +313,10 @@
 
       <!-- What you need -->
       <section class="flex flex-col gap-3">
-        <h2>What you need</h2>
+        <h2>What you need to build your own HiL simulator</h2>
         <p>
-          The agents handle the modeling, coding, and debugging. You still need the toolchain and
-          hardware they target:
+          The agents handle the modeling, the coding and the debugging. The toolchain and the
+          hardware they target are still on you:
         </p>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 not-prose">
           <div class="bg-neutral-50 border border-black/5 rounded-lg p-3 flex gap-2.5 items-start">

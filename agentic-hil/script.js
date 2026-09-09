@@ -1,4 +1,4 @@
-// Agentic HIL — embedded widget for the blog article.
+// Agentic HiL — embedded widget for the blog article.
 // No backend: every number/log/waveform here is real paper/synthesis data
 // (see paper/main.tex, paper/digest.tex, code/fpga/vivado/*.rpt). This file
 // only controls *when* that already-true content is revealed. Trimmed from
@@ -70,7 +70,7 @@
   ];
 
   const CHAT_USER_LINE =
-    'Design a HIL simulator for a 24V→12V asynchronous buck converter, fsw=20kHz, target Zynq-7020, Δt=50ns.';
+    'Design a HiL simulator for a 24V→12V asynchronous buck converter, fsw=20kHz, target Zynq-7020, Δt=50ns.';
 
   const CHAT_AGENT_LINES = [
     'On it — parsing the topology and target platform now.',

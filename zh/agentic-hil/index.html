@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="/agentic-hil/style.css" />
-    <title>Agentic HIL — 隋庆成</title>
+    <title>Agentic HiL — 隋庆成</title>
     <meta name="description"
       content="一个多智能体 LLM 框架,可自动生成基于 FPGA 的电力电子实时仿真器。已录用于 ECCE 2026。" />
     <link rel="alternate" hreflang="en" href="https://qcsui.github.io/agentic-hil/" />
@@ -27,12 +27,12 @@
           </span>
         </div>
         <div class="flex items-center gap-2 flex-wrap mt-2">
-          <h1 class="text-3xl font-medium">Agentic HIL</h1>
+          <h1 class="text-3xl font-medium">Agentic HiL</h1>
           <span class="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full font-medium">已录用 &middot; ECCE 2026</span>
         </div>
         <p class="text-neutral-500 text-lg">
           用多智能体 LLM 自动生成基于 FPGA 的电力电子实时仿真器:给一份电路拓扑，
-          直接产出验证过、能部署的硬件在环(HIL)求解器，不用懂 HDL。
+          直接产出验证过、能部署的硬件在环(HiL)求解器，不用懂 HDL。
         </p>
 
         <!-- Authors -->
@@ -87,37 +87,40 @@
 
       <!-- The problem -->
       <section class="flex flex-col gap-3">
-        <h2>为什么可以用 Agent 写 HIL 的代码</h2>
+        <h2>为什么可以用 Agent 写 HiL 的代码</h2>
         <p>
           现在的电力电子功率变换器，开关频率动辄几十上百 kHz，暂态过程压缩在纳秒量级。
-          HIL 仿真想把这些行为如实跑出来，步长就得压到 1 µs 以内，而且每一步的时间必须是确定的。
+          HiL 仿真想把这些行为如实跑出来，步长就得压到 1 µs 以内。这 1 µs 之内还要完成电路状态求解、以及 DAC/ADC 的采样和输出。
         </p>
         <p>
-          这个要求目前只有 FPGA 才能实现。这也是目前 HIL 仿真器的主流做法:把电路的连续时间模型离散化、定点化，写成 Verilog，综合到 FPGA 上。
-          这种硬件在环仿真设备的价格动辄几万元，甚至几十万元。他们的软件可以做到拖拽式建模，自动生成 Verilog，用户不需要懂 HDL。
+          这个要求目前只有 FPGA 才能实现。这也是目前 HiL 仿真器的主流做法:把电路的连续时间模型离散化、定点化，写成 Verilog，部署到 FPGA 上。
+          这些硬件在环仿真（Hardware-in-the-Loop, HiL）设备的价格动辄几万元，甚至几十万元。他们的软件可以做到拖拽式建模，自动生成 Verilog，用户不需要懂 FPGA 编程就能用上 HiL 设备。
         </p>
-        <p>所以用户被迫二选一:</p>
+        <p>但是用户被迫二选一:</p>
         <ul class="list-disc pl-6 space-y-1 max-w-[44rem] text-neutral-700">
-          <li>要么买昂贵的商用 HIL 仿真器，省事，但成本高;</li>
-          <li>要么自己琢磨建模和写 HDL，省钱，但折腾，还不一定准确。</li>
+          <li>要么买昂贵的商用 HiL 仿真器，省事，但成本高;</li>
+          <li>要么自己琢磨建模和写 HDL，省钱，费人工和时间，还不一定准确。</li>
         </ul>
         <p>
           自己写这条路难在哪?把电路的连续时间模型手写成定点、流水化的 Verilog，
           这是数字设计的活，大多数做电力电子的人并不熟。指望 AI 帮忙也有问题:
           VerilogCoder 这类代码生成框架眼里只有离散数字逻辑，既不懂连续物理，
-          也不管数值稳不稳定，更不知道 HIL 求解器头上还压着硬实时约束。
+          也不管数值稳不稳定，更不知道 HiL 求解器头上还压着硬实时约束。
         </p>
       </section>
 
       <!-- The idea -->
       <section class="flex flex-col gap-3">
-        <h2>思路</h2>
-        <p>
-          Agentic HIL 把这件事拆给三个 LLM 智能体分工。<strong>Physics Agent</strong>
-          负责把电路拓扑推成状态空间方程，做离散化和定点量化;<strong>Hardware Agent</strong>
-          把模型映射成扁平、低延迟的 Verilog，再送去综合;<strong>Debug Agent</strong>
-          拿综合后 RTL 的仿真波形跟浮点参考对，发现对不上就自己去改定点数据通路，改到吻合为止。
-        </p>
+        <h2>我们的思路:让 AI 在一个框架里把这些繁琐活儿做掉</h2>
+        <p>Agentic HiL 把这件事拆给三个 LLM 智能体分工:</p>
+        <ul class="list-disc pl-6 space-y-1.5 max-w-[44rem] text-neutral-700">
+          <li><strong>Physics Agent</strong> &mdash;&mdash;
+            把电路拓扑推成状态空间方程，做离散化和定点量化;</li>
+          <li><strong>Hardware Agent</strong> &mdash;&mdash;
+            把模型映射成扁平、低延迟的 Verilog，再送去综合;</li>
+          <li><strong>Debug Agent</strong> &mdash;&mdash;
+            拿综合后 RTL 的仿真波形跟浮点参考对，发现对不上就自己去改定点数据通路，改到吻合为止。</li>
+        </ul>
         <div class="flex items-stretch justify-center gap-1.5 flex-wrap py-2">
           <div class="w-36 bg-neutral-50 border border-black/5 rounded-lg p-2.5 text-xs flex flex-col gap-1">
             <span class="font-medium">输入</span>
@@ -141,16 +144,17 @@
           <span class="flow-arrow text-lg" aria-hidden="true">&rarr;</span>
           <div class="w-36 bg-blue-50 border border-blue-200 rounded-lg p-2.5 text-xs flex flex-col gap-1">
             <span class="font-medium">输出</span>
-            <span class="text-neutral-500">经过验证的 HIL 仿真器</span>
+            <span class="text-neutral-500">经过验证的 HiL 仿真器</span>
           </div>
         </div>
       </section>
 
       <!-- Capabilities -->
       <section class="flex flex-col gap-3">
-        <h2>它具体能做什么</h2>
+        <h2>HiLCoder 具体能做什么</h2>
         <p>
-          这三件事单独拿出来，哪一件靠人手工做都够折腾。点开下面几个标签，看看具体自动化掉了什么。
+          论文里的框架叫 <em>Agentic HiL</em>，装起来能直接跑的那个 skill 叫 <strong>HiLCoder</strong>。
+          下面几件事情单独拿出来，哪一件靠人手工做都非常费时费力。
         </p>
 
         <div class="flex gap-1.5 flex-wrap not-prose" id="capability-tabs">
@@ -223,7 +227,7 @@
           <div class="capability-panel hidden flex-col gap-2" data-cap="3">
             <h3 class="font-medium text-lg">以延迟为先的架构优化</h3>
             <p class="text-sm leading-relaxed text-neutral-700">
-              做数字设计的习惯是拿深流水线堆吞吐量，但 HIL 求解器要的恰恰相反:
+              做数字设计的习惯是拿深流水线堆吞吐量，但 HiL 求解器要的恰恰相反:
               要压的是单步延迟 t<sub>calc</sub>，不是把主频拉高。所以 Hardware Agent 反着来，
               把彼此独立的状态方程摊到并行 DSP 上，数据通路尽量保持扁平的组合逻辑，
               把延迟压到远小于步长 &Delta;t。
@@ -286,9 +290,9 @@
 
       <!-- What you need -->
       <section class="flex flex-col gap-3">
-        <h2>你需要准备什么</h2>
+        <h2>要搭自己的 HiL 仿真，你需要准备什么</h2>
         <p>
-          建模、写代码、调试这些交给智能体，但工具链和硬件还是得你自己备齐:
+          建模、写代码、调试这些交给智能体，但工具链和硬件还是得用户备齐:
         </p>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 not-prose">
           <div class="bg-neutral-50 border border-black/5 rounded-lg p-3 flex gap-2.5 items-start">
@@ -800,7 +804,7 @@
     <script src="/agentic-hil/script.js"></script>
     <script>
       // Chinese strings for the shared widgets.js implementation.
-      window.HIL_STRINGS = {
+      window.HiL_STRINGS = {
         unitNano: 'nV / nA',
         unitMicro: 'µV / µA',
         unitMilli: 'mV / mA',
