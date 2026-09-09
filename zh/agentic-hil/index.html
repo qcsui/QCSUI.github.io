@@ -1,0 +1,854 @@
+<!doctype html>
+<html lang="zh-CN">
+
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="/agentic-hil/style.css" />
+    <title>Agentic HIL — Qingcheng Sui</title>
+    <meta name="description"
+      content="一个多智能体 LLM 框架,可自动生成基于 FPGA 的电力电子实时仿真器。已录用于 ECCE 2026。" />
+    <link rel="alternate" hreflang="en" href="https://qcsui.github.io/agentic-hil/" />
+    <link rel="alternate" hreflang="zh" href="https://qcsui.github.io/zh/agentic-hil/" />
+  </head>
+
+  <body class="w-full min-h-dvh bg-white text-neutral-800">
+    <main class="max-w-5xl mx-auto px-6 py-14 flex flex-col gap-10 article-prose">
+
+      <!-- Header -->
+      <header class="flex flex-col gap-3">
+        <div class="flex items-center justify-between gap-3">
+          <a href="/zh/" class="text-sm text-neutral-400 hover:text-neutral-600">&larr; qcsui.github.io</a>
+          <span class="flex items-center gap-2 text-sm">
+            <a href="/agentic-hil/" class="text-blue-600 hover:underline">EN</a>
+            <span class="text-neutral-300">/</span>
+            <span class="text-neutral-800 font-medium">中文</span>
+          </span>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap mt-2">
+          <h1 class="text-3xl font-medium">Agentic HIL</h1>
+          <span class="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full font-medium">已录用 &middot; ECCE 2026</span>
+        </div>
+        <p class="text-neutral-500 text-lg">
+          一个多智能体 LLM 框架,可自动生成基于 FPGA 的电力电子实时仿真器 &mdash;&mdash;
+          从一份电路拓扑,直接得到经过验证、可部署的硬件在环(HIL)求解器,不需要 HDL 经验。
+        </p>
+
+        <!-- Authors -->
+        <div class="flex flex-col gap-0.5 text-sm not-prose mt-1">
+          <p class="text-neutral-700">
+            <span class="font-medium">Qingcheng Sui</span>, Yang Li, Jiaze Kong, Yu Zuo, Wilmar Martinez
+          </p>
+          <p class="text-neutral-500">
+            比利时鲁汶大学(KU Leuven)电气工程系 &ndash; EnergyVille,Genk
+          </p>
+        </div>
+
+        <!-- Action links -->
+        <div class="flex items-center gap-2 flex-wrap not-prose mt-1">
+          <a href="/agentic-hil/agentic-hil-ecce2026.pdf"
+            class="bg-neutral-800 text-white text-sm px-3.5 py-2 rounded-full inline-flex items-center gap-1.5 hover:bg-neutral-700">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+              <path d="M14 2v6h6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+            </svg>
+            论文 (PDF)
+          </a>
+          <button type="button" id="bibtex-toggle"
+            class="bg-neutral-800 text-white text-sm px-3.5 py-2 rounded-full inline-flex items-center gap-1.5 hover:bg-neutral-700">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 19.5V5a2 2 0 0 1 2-2h13v18H6a2 2 0 0 1-2-1.5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+              <path d="M8 7h7M8 11h7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+            BibTeX
+          </button>
+          <span
+            class="bg-neutral-100 text-neutral-400 text-sm px-3.5 py-2 rounded-full inline-flex items-center gap-1.5 cursor-not-allowed"
+            title="代码仓库将随论文发表一并开放">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="m8 6-6 6 6 6M16 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            代码 &mdash; 论文发表后开源
+          </span>
+        </div>
+
+        <!-- BibTeX block (toggled) -->
+        <pre id="bibtex-block"
+          class="hidden not-prose bg-neutral-50 border border-black/5 rounded-lg p-3 text-xs overflow-auto font-mono leading-relaxed">@inproceedings{sui2026agentichil,
+  title     = {Agentic HiL: A Multi-Agent LLM Framework for Autonomous
+               Generation of FPGA-based Real-Time Power Electronics Simulators},
+  author    = {Sui, Qingcheng and Li, Yang and Kong, Jiaze and
+               Zuo, Yu and Martinez, Wilmar},
+  booktitle = {IEEE Energy Conversion Congress and Exposition (ECCE)},
+  year      = {2026}
+}</pre>
+      </header>
+
+      <!-- The problem -->
+      <section class="flex flex-col gap-3">
+        <h2>问题在哪</h2>
+        <p>
+          现代功率变换器的开关频率已经到了几十甚至几百 kHz,暂态过程发生在纳秒量级。
+          要在硬件在环(HIL)仿真里如实还原这些行为,就必须以亚微秒级的步长、并且是确定性地
+          推进模型 &mdash;&mdash; 这件事目前只有 FPGA 能稳定做到。
+        </p>
+        <p>
+          麻烦在于:把电路的连续时间物理模型手工翻译成定点、流水化的 Verilog,
+          是一项专门的硬件设计技能,而大多数电力电子工程师并不具备。
+          本来可以帮忙的 AI 代码生成工具 &mdash;&mdash; 比如 VerilogCoder 这类框架 &mdash;&mdash;
+          只理解离散数字逻辑,对连续物理、数值稳定性,以及 HIL 求解器必须满足的硬实时约束
+          没有任何概念。
+        </p>
+      </section>
+
+      <!-- The idea -->
+      <section class="flex flex-col gap-3">
+        <h2>思路</h2>
+        <p>
+          Agentic HIL 把这件事拆给三个协作的 LLM 智能体。<strong>Physics Agent</strong>
+          把电路拓扑转成离散化、定点化的状态空间模型;<strong>Hardware Agent</strong>
+          把这个模型映射成扁平化、低延迟的 Verilog 并推进综合;<strong>Debug Agent</strong>
+          则把综合后 RTL 的仿真波形与 Physics Agent 自己的浮点参考做对比,
+          自动修复定点数据通路,直到两者吻合。
+        </p>
+        <div class="flex items-stretch justify-center gap-1.5 flex-wrap py-2">
+          <div class="w-36 bg-neutral-50 border border-black/5 rounded-lg p-2.5 text-xs flex flex-col gap-1">
+            <span class="font-medium">输入</span>
+            <span class="text-neutral-500">拓扑 + 指标</span>
+          </div>
+          <span class="flow-arrow text-lg" aria-hidden="true">&rarr;</span>
+          <div class="w-36 bg-neutral-50 border border-black/5 rounded-lg p-2.5 text-xs flex flex-col gap-1">
+            <span class="font-medium">Physics Agent</span>
+            <span class="text-neutral-500">状态空间 &amp; Q 格式</span>
+          </div>
+          <span class="flow-arrow text-lg" aria-hidden="true">&rarr;</span>
+          <div class="w-36 bg-neutral-50 border border-black/5 rounded-lg p-2.5 text-xs flex flex-col gap-1">
+            <span class="font-medium">Hardware Agent</span>
+            <span class="text-neutral-500">Verilog &amp; 综合</span>
+          </div>
+          <span class="flow-arrow text-lg" aria-hidden="true">&rarr;</span>
+          <div class="w-36 bg-neutral-50 border border-black/5 rounded-lg p-2.5 text-xs flex flex-col gap-1">
+            <span class="font-medium">Debug Agent</span>
+            <span class="text-neutral-500">RMSE &amp; 自动修复</span>
+          </div>
+          <span class="flow-arrow text-lg" aria-hidden="true">&rarr;</span>
+          <div class="w-36 bg-blue-50 border border-blue-200 rounded-lg p-2.5 text-xs flex flex-col gap-1">
+            <span class="font-medium">输出</span>
+            <span class="text-neutral-500">经过验证的 HIL 仿真器</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Capabilities -->
+      <section class="flex flex-col gap-3">
+        <h2>它具体能做什么</h2>
+        <p>
+          上面三个智能体各自负责的事情都很具体,而且单独拎出来靠人手工做都相当繁琐。
+          点开每个标签,看看它们实际自动化掉了什么。
+        </p>
+
+        <div class="flex gap-1.5 flex-wrap not-prose" id="capability-tabs">
+          <button type="button" data-cap="1"
+            class="capability-tab bg-blue-500 text-white text-sm px-3 py-2 rounded-md font-medium">1 &middot; 定点格式搜索</button>
+          <button type="button" data-cap="2"
+            class="capability-tab bg-neutral-100 text-neutral-600 text-sm px-3 py-2 rounded-md font-medium">2 &middot; 自动调试</button>
+          <button type="button" data-cap="3"
+            class="capability-tab bg-neutral-100 text-neutral-600 text-sm px-3 py-2 rounded-md font-medium">3 &middot; 架构优化</button>
+          <button type="button" data-cap="4"
+            class="capability-tab bg-neutral-100 text-neutral-600 text-sm px-3 py-2 rounded-md font-medium">4 &middot; 时序闭环</button>
+        </div>
+
+        <div class="bg-neutral-50 border border-black/5 rounded-lg p-4 not-prose" id="capability-panels">
+          <div class="capability-panel flex flex-col gap-2" data-cap="1">
+            <h3 class="font-medium text-lg">自动搜索定点格式</h3>
+            <p class="text-sm leading-relaxed text-neutral-700">
+              Physics Agent 对每个状态变量做静态范围分析 &mdash;&mdash; 比如电感电流可能达到的最大值
+              &mdash;&mdash; 然后挑出既不溢出、又不浪费精度的最小 Q 格式位宽。
+              工程师原本要花几个小时手算定标,现在变成一次自动搜索,
+              而且电路参数一改就会自动重跑。
+            </p>
+            <div class="flex items-center gap-1.5 flex-wrap text-xs">
+              <span class="bg-white border border-black/5 px-2 py-1 rounded-md">Output: model_fixed.c (Golden Reference)</span>
+              <span class="bg-white border border-black/5 px-2 py-1 rounded-md">Format found: Q6.26</span>
+            </div>
+
+            <!-- Interactive: Q-format explorer -->
+            <div id="qformat-widget" class="bg-white border border-black/5 rounded-lg p-3 flex flex-col gap-2.5 mt-1">
+              <p class="text-xs text-neutral-500">
+                动手试试:总共 32 位,拖动滑块改变整数位和小数位的分配。
+                信号必须装得进量程,剩下的位宽全部换成分辨率。
+              </p>
+              <div class="flex items-center gap-3 flex-wrap">
+                <input type="range" id="qformat-slider" min="2" max="16" value="6" step="1" class="flex-1 min-w-40" />
+                <span id="qformat-label" class="font-mono text-sm font-medium w-20">Q6.26</span>
+              </div>
+              <div class="grid grid-cols-2 gap-3 text-xs">
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-neutral-400">量程</span>
+                  <span id="qformat-range" class="font-mono">±32</span>
+                </div>
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-neutral-400">分辨率</span>
+                  <span id="qformat-res" class="font-mono">14.9 nV / nA</span>
+                </div>
+              </div>
+              <div class="flex flex-col gap-1">
+                <div class="flex items-center justify-between text-[0.65rem] text-neutral-400">
+                  <span>信号峰值(启动过冲 22.5 V)与可表示量程之比</span>
+                </div>
+                <div class="w-full h-2 rounded-full bg-neutral-100 overflow-hidden">
+                  <div id="qformat-bar" class="h-full rounded-full transition-all duration-150" style="width: 70%; background-color: #3b82f6;"></div>
+                </div>
+              </div>
+              <p id="qformat-verdict" class="text-xs"></p>
+            </div>
+          </div>
+          <div class="capability-panel hidden flex-col gap-2" data-cap="2">
+            <h3 class="font-medium text-lg">波形驱动的自动调试</h3>
+            <p class="text-sm leading-relaxed text-neutral-700">
+              不用人盯着 VCD 波形一行行看,Debug Agent 会把综合后 RTL 的仿真输出
+              和 Physics Agent 自己的浮点参考做对比。一旦 RMSE 突然变大 &mdash;&mdash;
+              这通常意味着移位没对齐、漏了符号扩展,或者寄存器发生了回绕溢出 &mdash;&mdash;
+              它就沿着 Verilog 的抽象语法树往回追,定位到出问题的那个算术节点,
+              然后自动改写数据通路的定义。
+            </p>
+            <div class="flex items-center gap-1.5 flex-wrap text-xs">
+              <span class="bg-white border border-black/5 px-2 py-1 rounded-md">Checks: RMSE vs. golden reference</span>
+              <span class="bg-white border border-black/5 px-2 py-1 rounded-md">Fixes: sign-extension, bit-alignment, overflow</span>
+            </div>
+          </div>
+          <div class="capability-panel hidden flex-col gap-2" data-cap="3">
+            <h3 class="font-medium text-lg">以延迟为先的架构优化</h3>
+            <p class="text-sm leading-relaxed text-neutral-700">
+              常规的数字设计智能体习惯用深流水线去堆吞吐量 &mdash;&mdash;
+              这对 HIL 求解器恰恰是反的:这里要压的是 t<sub>calc</sub>,不是把时钟频率拉高。
+              Hardware Agent 的做法是把相互独立的状态方程映射到并行的 DSP 单元上,
+              并让数据通路保持扁平的组合逻辑,从而把延迟压到远小于实时步长 &Delta;t。
+            </p>
+            <div class="flex items-center gap-1.5 flex-wrap text-xs">
+              <span class="bg-white border border-black/5 px-2 py-1 rounded-md">t<sub>calc</sub> &lt; 10 ns</span>
+              <span class="bg-white border border-black/5 px-2 py-1 rounded-md">&Delta;t = 50 ns</span>
+              <span class="bg-white border border-black/5 px-2 py-1 rounded-md">177 levels, unrolled combinational</span>
+            </div>
+
+            <!-- Interactive: real-time budget -->
+            <div id="budget-widget" class="bg-white border border-black/5 rounded-lg p-3 flex flex-col gap-2.5 mt-1">
+              <p class="text-xs text-neutral-500">
+                动手试试:你的变换器需要多细的时间步长?10&nbsp;ns 的数据通路还塞得进去吗?
+              </p>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <label class="flex flex-col gap-1">
+                  <span class="flex items-center justify-between">
+                    <span class="text-neutral-400">开关频率</span>
+                    <span id="budget-fsw-val" class="font-mono">20 kHz</span>
+                  </span>
+                  <input type="range" id="budget-fsw" min="10" max="1000" value="20" step="10" />
+                </label>
+                <label class="flex flex-col gap-1">
+                  <span class="flex items-center justify-between">
+                    <span class="text-neutral-400">每周期求解步数</span>
+                    <span id="budget-steps-val" class="font-mono">1000 步 / 周期</span>
+                  </span>
+                  <input type="range" id="budget-steps" min="100" max="5000" value="1000" step="100" />
+                </label>
+              </div>
+              <div class="flex flex-col gap-1">
+                <div class="flex items-center justify-between text-xs">
+                  <span class="text-neutral-400">单步预算 &Delta;t</span>
+                  <span id="budget-dt" class="font-mono">50.0 ns</span>
+                </div>
+                <div id="budget-bar" class="w-full h-2.5 rounded-full bg-neutral-100 overflow-hidden">
+                  <div id="budget-fill" class="h-full rounded-full transition-all duration-150" style="width: 20%; background-color: #22c55e;"></div>
+                </div>
+                <div class="text-[0.65rem] text-neutral-400">填充部分 = 生成的数据通路所需的 10 ns</div>
+              </div>
+              <p id="budget-verdict" class="text-xs"></p>
+            </div>
+          </div>
+          <div class="capability-panel hidden flex-col gap-2" data-cap="4">
+            <h3 class="font-medium text-lg">自动时序闭环</h3>
+            <p class="text-sm leading-relaxed text-neutral-700">
+              框架会循环驱动 Xilinx Vivado:综合、把关键路径和 &Delta;t 做比较,
+              一旦时序不满足,就重新安排并行结构,而不是无脑加流水级 &mdash;&mdash;
+              后者只会把延迟问题重新引回来。这个循环会一直迭代,直到时序收敛并留有余量。
+            </p>
+            <div class="flex items-center gap-1.5 flex-wrap text-xs">
+              <span class="bg-white border border-black/5 px-2 py-1 rounded-md">4.28% LUT</span>
+              <span class="bg-white border border-black/5 px-2 py-1 rounded-md">2.7% DSP48E1</span>
+              <span class="bg-white border border-black/5 px-2 py-1 rounded-md">0% BRAM</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- What you need -->
+      <section class="flex flex-col gap-3">
+        <h2>你需要准备什么</h2>
+        <p>
+          建模、写代码、调试这些事交给智能体,但工具链和目标硬件还是得你来准备:
+        </p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 not-prose">
+          <div class="bg-neutral-50 border border-black/5 rounded-lg p-3 flex gap-2.5 items-start">
+            <span class="size-6 shrink-0 rounded-full bg-blue-500 text-white text-xs font-medium flex items-center justify-center">1</span>
+            <div class="flex flex-col gap-0.5">
+              <span class="font-medium text-sm">一台工作站</span>
+              <span class="text-xs text-neutral-500">跑 LLM 智能体流水线、Vivado 和仿真工具</span>
+            </div>
+          </div>
+          <div class="bg-neutral-50 border border-black/5 rounded-lg p-3 flex gap-2.5 items-start">
+            <span class="size-6 shrink-0 rounded-full bg-blue-500 text-white text-xs font-medium flex items-center justify-center">2</span>
+            <div class="flex flex-col gap-0.5">
+              <span class="font-medium text-sm">LLM API 权限</span>
+              <span class="text-xs text-neutral-500">Physics / Hardware / Debug 三个智能体本身就是 LLM 驱动的</span>
+            </div>
+          </div>
+          <div class="bg-neutral-50 border border-black/5 rounded-lg p-3 flex gap-2.5 items-start">
+            <span class="size-6 shrink-0 rounded-full bg-blue-500 text-white text-xs font-medium flex items-center justify-center">3</span>
+            <div class="flex flex-col gap-0.5">
+              <span class="font-medium text-sm">Xilinx Vivado</span>
+              <span class="text-xs text-neutral-500">综合、实现,以及时序闭环那一圈迭代</span>
+            </div>
+          </div>
+          <div class="bg-neutral-50 border border-black/5 rounded-lg p-3 flex gap-2.5 items-start">
+            <span class="size-6 shrink-0 rounded-full bg-blue-500 text-white text-xs font-medium flex items-center justify-center">4</span>
+            <div class="flex flex-col gap-0.5">
+              <span class="font-medium text-sm">iverilog / yosys</span>
+              <span class="text-xs text-neutral-500">开源 RTL 仿真,用于 AST 波形回溯那一步</span>
+            </div>
+          </div>
+          <div class="bg-neutral-50 border border-black/5 rounded-lg p-3 flex gap-2.5 items-start">
+            <span class="size-6 shrink-0 rounded-full bg-blue-500 text-white text-xs font-medium flex items-center justify-center">5</span>
+            <div class="flex flex-col gap-0.5">
+              <span class="font-medium text-sm">一份仿真基准真值</span>
+              <span class="text-xs text-neutral-500">浮点参考模型(比如 PLECS),Debug Agent 拿它来校验 RTL</span>
+            </div>
+          </div>
+          <div class="bg-neutral-50 border border-black/5 rounded-lg p-3 flex gap-2.5 items-start">
+            <span class="size-6 shrink-0 rounded-full bg-blue-500 text-white text-xs font-medium flex items-center justify-center">6</span>
+            <div class="flex flex-col gap-0.5">
+              <span class="font-medium text-sm">目标 FPGA 板卡 + 用户手册</span>
+              <span class="text-xs text-neutral-500">比如 Zynq-7020 板卡 &mdash;&mdash; 手册用于引脚映射和时钟配置</span>
+            </div>
+          </div>
+          <div class="bg-neutral-50 border border-black/5 rounded-lg p-3 flex gap-2.5 items-start sm:col-span-2">
+            <span class="size-6 shrink-0 rounded-full bg-blue-500 text-white text-xs font-medium flex items-center justify-center">7</span>
+            <div class="flex flex-col gap-0.5">
+              <span class="font-medium text-sm">DAC/ADC 子板 + 用户手册</span>
+              <span class="text-xs text-neutral-500">只有当你要用真实模拟 I/O 闭环、而不只是跑 RTL 仿真时才需要</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Why DCM matters -->
+      <section class="flex flex-col gap-3">
+        <h2>为什么必须把物理放进环里</h2>
+        <p>
+          下面这个失效模式,正是"这是个物理问题,而不是代码生成问题"的原因。
+          这里是 Buck 变换器的状态空间模型,用和生成的 RTL 完全相同的前向欧拉格式、
+          50&nbsp;ns 步长,在你的浏览器里实时积分出来的。
+        </p>
+        <p>
+          把 <em>DCM 处理</em> 关掉,盯住电感电流:求解器会一路积分穿过零点,
+          算出一个二极管在物理上根本不允许的负电流。从这一刻起后面的波形全是错的,
+          而 Verilog 在语法上挑不出任何毛病 &mdash;&mdash;
+          这正是只盯着布尔正确性的智能体抓不住它的原因。
+        </p>
+
+        <div id="buck-widget" class="bg-neutral-50 border border-black/5 rounded-lg p-4 flex flex-col gap-3 not-prose">
+          <div class="flex items-center justify-between gap-3 flex-wrap">
+            <span class="text-sm font-medium">电感电流 i<sub>L</sub></span>
+            <label class="inline-flex items-center gap-2 text-sm cursor-pointer">
+              <input type="checkbox" id="buck-dcm" checked class="size-4 accent-blue-500" />
+              <span>DCM 处理</span>
+            </label>
+          </div>
+
+          <canvas id="buck-canvas" data-height="230" class="w-full"></canvas>
+          <p id="buck-readout" class="text-xs leading-relaxed"></p>
+
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs pt-1 border-t border-black/5">
+            <label class="flex flex-col gap-1">
+              <span class="flex items-center justify-between">
+                <span class="text-neutral-400">L</span>
+                <span id="buck-L-val" class="font-mono">100 µH</span>
+              </span>
+              <input type="range" id="buck-L" min="20" max="500" value="100" step="10" />
+            </label>
+            <label class="flex flex-col gap-1">
+              <span class="flex items-center justify-between">
+                <span class="text-neutral-400">C</span>
+                <span id="buck-C-val" class="font-mono">100 µF</span>
+              </span>
+              <input type="range" id="buck-C" min="10" max="500" value="100" step="10" />
+            </label>
+            <label class="flex flex-col gap-1">
+              <span class="flex items-center justify-between">
+                <span class="text-neutral-400">R</span>
+                <span id="buck-R-val" class="font-mono">10 Ω</span>
+              </span>
+              <input type="range" id="buck-R" min="1" max="50" value="10" step="1" />
+            </label>
+            <label class="flex flex-col gap-1">
+              <span class="flex items-center justify-between">
+                <span class="text-neutral-400">占空比</span>
+                <span id="buck-D-val" class="font-mono">0.50</span>
+              </span>
+              <input type="range" id="buck-D" min="10" max="90" value="50" step="5" />
+            </label>
+          </div>
+          <p class="text-[0.7rem] text-neutral-400">
+            V<sub>in</sub> = 24 V,f<sub>sw</sub> = 20 kHz,&Delta;t = 50 ns,前向欧拉 &mdash;&mdash;
+            浏览器内实时计算,每次重绘约 60,000 步积分。
+          </p>
+        </div>
+      </section>
+
+      <!-- See it in action -->
+      <section class="flex flex-col gap-3">
+        <h2>看看实际跑起来的样子</h2>
+        <p>
+          下面就是前面说的那条流水线,在回放一次异步 Buck 变换器的真实运行。
+          点 Run Simulation &mdash;&mdash; 里面每一个数字、每一行日志、每一条波形
+          都是真实的综合/仿真数据,不是摆样子的。
+          (仪表盘界面保持英文,和真实 EDA 工具一致。)
+        </p>
+
+        <div class="border border-black/5 rounded-lg overflow-hidden not-prose" style="height: 760px;">
+          <div class="flex flex-col h-full w-full gap-1.5 p-1.5 bg-white">
+            <!-- Trimmed toolbar: project + Run Simulation only -->
+            <header
+              class="h-12 shrink-0 bg-neutral-50 border border-black/5 w-full rounded-lg flex items-center justify-between px-2.5">
+              <select name="" id="" class="outline-none border border-black/5 p-1 h-8 rounded-md text-xs">
+                <option value="buck_converter">Project: buck_converter</option>
+              </select>
+              <button type="button" id="run-simulation-btn"
+                class="bg-blue-500 px-3 py-1.5 rounded-md text-white inline-flex items-center gap-1.5 h-8 text-xs">
+                <svg width="10" height="10" viewBox="-3 0 28 28" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M440.415,583.554 L421.418,571.311 C420.291,570.704 419,570.767 419,572.946 L419,597.054 C419,599.046 420.385,599.36 421.418,598.689 L440.415,586.446 C441.197,585.647 441.197,584.353 440.415,583.554"
+                    transform="translate(-419, -571)" fill="#ffffff" />
+                </svg>
+                <span id="run-simulation-label">Run Simulation</span>
+              </button>
+            </header>
+
+            <section class="flex flex-1 w-full gap-2.5 overflow-auto">
+              <aside class="flex flex-col flex-1 gap-1.5 items-start shrink-0!">
+                <div
+                  class="h-10 shrink-0 w-full bg-neutral-50 border border-black/5 rounded-lg flex items-center px-2.5 font-medium text-xs">
+                  Chat/Agent
+                </div>
+                <div class="rounded-lg flex flex-col h-full w-full gap-1.5">
+                  <div class="flex-1 flex flex-col h-full gap-1.5">
+                    <div class="bg-neutral-50 border border-black/5 rounded-lg shrink-0 flex flex-col p-2 gap-2 text-xs">
+                      <div class="flex items-center justify-between">
+                        <span class="font-medium">Agent</span>
+                        <span class="text-neutral-500 text-[0.65rem] font-light">10:31 AM</span>
+                      </div>
+                      <ul class="space-y-1">
+                        <li class="inline-flex items-center gap-1 checklist-item">
+                          <span class="checklist-tick size-3.5 items-center justify-center inline-flex rounded-full p-0.5 border bg-green-500 *:fill-white border-black/5">
+                            <svg width="20" height="20" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M2,9.014L3.414,7.6L6.004,10.189L12.593,3.6L14.007,5.014L6.003,13.017L2,9.014Z" />
+                            </svg>
+                          </span>
+                          1. Understand the physical system
+                        </li>
+                        <li class="inline-flex items-center gap-1 checklist-item">
+                          <span class="checklist-tick size-3.5 items-center justify-center inline-flex rounded-full p-0.5 border bg-green-500 *:fill-white border-black/5">
+                            <svg width="20" height="20" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M2,9.014L3.414,7.6L6.004,10.189L12.593,3.6L14.007,5.014L6.003,13.017L2,9.014Z" />
+                            </svg>
+                          </span>
+                          2. Build the mathematical model
+                        </li>
+                        <li class="inline-flex items-center gap-1 checklist-item">
+                          <span class="checklist-tick size-3.5 items-center justify-center inline-flex rounded-full p-0.5 border bg-green-500 *:fill-white border-black/5">
+                            <svg width="20" height="20" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M2,9.014L3.414,7.6L6.004,10.189L12.593,3.6L14.007,5.014L6.003,13.017L2,9.014Z" />
+                            </svg>
+                          </span>
+                          3. Generate FPGA code (Agent)
+                        </li>
+                        <li class="inline-flex items-center gap-1 checklist-item">
+                          <span class="checklist-tick size-3.5 items-center justify-center inline-flex rounded-full p-0.5 border bg-green-500 *:fill-white border-black/5">
+                            <svg width="20" height="20" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M2,9.014L3.414,7.6L6.004,10.189L12.593,3.6L14.007,5.014L6.003,13.017L2,9.014Z" />
+                            </svg>
+                          </span>
+                          4. Compile and resource check
+                        </li>
+                        <li class="inline-flex items-center gap-1 checklist-item">
+                          <span class="checklist-tick size-3.5 items-center justify-center inline-flex rounded-full p-0.5 border bg-green-500 *:fill-white border-black/5">
+                            <svg width="20" height="20" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M2,9.014L3.414,7.6L6.004,10.189L12.593,3.6L14.007,5.014L6.003,13.017L2,9.014Z" />
+                            </svg>
+                          </span>
+                          5. Run simulation and analyse results
+                        </li>
+                      </ul>
+                      <div class="flex items-center justify-between gap-2" aria-label="progress">
+                        <div class="w-full h-1.5 rounded-full bg-black/10 overflow-hidden">
+                          <div id="checklist-progress-bar" class="h-full rounded-full bg-blue-500 transition-all duration-300" style="width: 60%;"></div>
+                        </div>
+                        <span id="checklist-progress-label" class="whitespace-nowrap">3/5</span>
+                      </div>
+                    </div>
+                    <div class="bg-neutral-50 border border-black/5 rounded-lg flex-1 p-2 text-xs flex flex-col overflow-hidden">
+                      <div class="flex items-center justify-between mb-1.5">
+                        <span class="font-medium">Agent</span>
+                        <span class="text-neutral-500 text-[0.65rem] font-light">10:31 AM</span>
+                      </div>
+                      <div id="agent-chat-thread" class="flex-1 overflow-auto space-y-1.5"></div>
+                    </div>
+                  </div>
+                </div>
+              </aside>
+
+              <article class="flex flex-col flex-4 gap-1.5 items-start">
+                <ul id="step-bar"
+                  class="h-12 shrink-0 w-full bg-neutral-50 border border-black/5 rounded-lg flex items-center gap-3 px-2.5 font-medium text-xs">
+                  <li class="inline-flex items-center gap-1.5 px-2 justify-center llm-step done" data-step="1">
+                    <span class="step-number size-4 items-center justify-center inline-flex rounded-full border border-black/5 text-[0.65rem]">1</span>
+                    <span>Requirements</span>
+                    <span class="step-tick size-4 items-center justify-center inline-flex rounded-full border border-black/5">
+                      <svg width="12" height="12" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M2,9.014L3.414,7.6L6.004,10.189L12.593,3.6L14.007,5.014L6.003,13.017L2,9.014Z" />
+                      </svg>
+                    </span>
+                  </li>
+                  <li class="inline-flex items-center gap-1.5 px-2 justify-center llm-step current" data-step="2">
+                    <span class="step-number size-4 items-center justify-center inline-flex rounded-full border border-black/5 text-[0.65rem]">2</span>
+                    <span>Math Modeling</span>
+                    <span class="step-tick size-4 items-center justify-center inline-flex rounded-full border border-black/5 invisible">
+                      <svg width="12" height="12" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M2,9.014L3.414,7.6L6.004,10.189L12.593,3.6L14.007,5.014L6.003,13.017L2,9.014Z" />
+                      </svg>
+                    </span>
+                  </li>
+                  <li class="inline-flex items-center gap-1.5 px-2 justify-center llm-step" data-step="3">
+                    <span class="step-number size-4 items-center justify-center inline-flex rounded-full border border-black/5 text-[0.65rem]">3</span>
+                    <span>Code Gen</span>
+                    <span class="step-tick size-4 items-center justify-center inline-flex rounded-full border border-black/5 invisible">
+                      <svg width="12" height="12" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M2,9.014L3.414,7.6L6.004,10.189L12.593,3.6L14.007,5.014L6.003,13.017L2,9.014Z" />
+                      </svg>
+                    </span>
+                  </li>
+                  <li class="inline-flex items-center gap-1.5 px-2 justify-center llm-step" data-step="4">
+                    <span class="step-number size-4 items-center justify-center inline-flex rounded-full border border-black/5 text-[0.65rem]">4</span>
+                    <span>Simulation</span>
+                    <span class="step-tick size-4 items-center justify-center inline-flex rounded-full border border-black/5 invisible">
+                      <svg width="12" height="12" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M2,9.014L3.414,7.6L6.004,10.189L12.593,3.6L14.007,5.014L6.003,13.017L2,9.014Z" />
+                      </svg>
+                    </span>
+                  </li>
+                  <li class="inline-flex items-center gap-1.5 px-2 justify-center llm-step" data-step="5">
+                    <span class="step-number size-4 items-center justify-center inline-flex rounded-full border border-black/5 text-[0.65rem]">5</span>
+                    <span>Results</span>
+                    <span class="step-tick size-4 items-center justify-center inline-flex rounded-full border border-black/5 invisible">
+                      <svg width="12" height="12" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M2,9.014L3.414,7.6L6.004,10.189L12.593,3.6L14.007,5.014L6.003,13.017L2,9.014Z" />
+                      </svg>
+                    </span>
+                  </li>
+                </ul>
+
+                <div class="flex-1 w-full flex overflow-auto">
+                  <div class="grid grid-cols-3 gap-2 grid-rows-12 w-full">
+                    <!-- System Topology -->
+                    <div class="row-span-6 bg-neutral-50 rounded-lg flex-1 border border-black/5 stage-panel" data-stage="1">
+                      <div class="flex flex-col h-full">
+                        <h5 class="border-b border-black/5 flex items-center p-2 font-medium text-xs">System Topology</h5>
+                        <div class="p-2 text-xs flex flex-col h-full gap-1.5">
+                          <div class="flex-1 flex items-start max-h-32 overflow-auto bg-white">
+                            <img src="/agentic-hil/buck_circuit_plecs.png" alt="Buck converter topology (PLECS)" class="w-full h-full object-contain object-top">
+                          </div>
+                          <div class="flex items-center gap-1.5 border-t border-black/5 pt-1.5 flex-wrap">
+                            <span class="bg-neutral-100 p-1 rounded-md">Asynchronous Buck</span>
+                            <span class="bg-neutral-100 p-1 rounded-md">CCM + DCM</span>
+                            <span class="bg-neutral-100 p-1 rounded-md">20 kHz</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- Control Signals -->
+                    <div class="row-span-6 bg-neutral-50 rounded-lg flex-1 border border-black/5 stage-panel" data-stage="1">
+                      <div class="flex flex-col h-full">
+                        <h5 class="border-b border-black/5 flex items-center p-2 font-medium text-xs">Control Signals</h5>
+                        <div class="p-2 text-xs flex flex-col h-full gap-1.5">
+                          <div class="flex-1 flex items-start max-h-32 overflow-auto bg-white">
+                            <img src="/agentic-hil/buck_converter_switching_patterns.png" alt="Buck converter switching waveforms" class="w-full h-full object-contain object-top">
+                          </div>
+                          <div class="flex items-center gap-1.5 border-t border-black/5 pt-1.5 flex-wrap">
+                            <span class="bg-neutral-100 p-1 rounded-md">D = 0.5</span>
+                            <span class="bg-neutral-100 p-1 rounded-md">20 kHz</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- Design Summary -->
+                    <div class="row-span-5 bg-neutral-50 rounded-lg flex-1 border border-black/5 stage-panel" data-stage="1">
+                      <div class="flex flex-col h-full">
+                        <h5 class="border-b border-black/5 flex items-center p-2 font-medium text-xs">Design Summary</h5>
+                        <div class="p-2 text-xs flex flex-col h-full gap-1.5">
+                          <ul class="w-full space-y-1.5 overflow-auto max-h-32">
+                            <li class="grid grid-cols-2"><span class="opacity-70">Input Voltage</span><span>24 V</span></li>
+                            <li class="grid grid-cols-2"><span class="opacity-70">Inductance L<sub>o</sub></span><span>100 &micro;H</span></li>
+                            <li class="grid grid-cols-2"><span class="opacity-70">Capacitance C<sub>o</sub></span><span>100 &micro;F</span></li>
+                            <li class="grid grid-cols-2"><span class="opacity-70">Load Resistance</span><span>10 &Omega;</span></li>
+                            <li class="grid grid-cols-2"><span class="opacity-70">Target Platform</span><span>Zynq-7020</span></li>
+                            <li class="grid grid-cols-2"><span class="opacity-70">Time Step (&Delta;t)</span><span>50 ns</span></li>
+                            <li class="grid grid-cols-2"><span class="opacity-70">Fixed-Point Format</span><span>Q6.26</span></li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="row-span-7 flex flex-col gap-1.5 overflow-auto">
+                      <!-- Resource Usage -->
+                      <div class="flex-1 bg-neutral-50 rounded-lg border border-black/5 stage-panel" data-stage="4">
+                        <div class="flex flex-col h-full overflow-hidden">
+                          <h5 class="border-b border-black/5 flex items-center p-2 font-medium text-xs">Resource Usage</h5>
+                          <ul class="p-2 text-xs grid gap-1">
+                            <li class="flex items-center justify-between gap-2 w-full">
+                              <span class="flex-[0.15]">LUT</span>
+                              <div class="flex flex-1 items-center justify-between gap-2">
+                                <div class="flex-1 h-1.5 rounded-full bg-black/10 overflow-hidden">
+                                  <div class="h-full rounded-full bg-green-400 transition-all duration-300 resource-bar-fill" style="width: 4.28%;"></div>
+                                </div>
+                                4.28%
+                              </div>
+                            </li>
+                            <li class="flex items-center justify-between gap-2 w-full">
+                              <span class="flex-[0.15]">FF</span>
+                              <div class="flex flex-1 items-center justify-between gap-2">
+                                <div class="flex-1 h-1.5 rounded-full bg-black/10 overflow-hidden">
+                                  <div class="h-full rounded-full bg-green-400 transition-all duration-300 resource-bar-fill" style="width: 0.5%;"></div>
+                                </div>
+                                &lt;0.1%
+                              </div>
+                            </li>
+                            <li class="flex items-center gap-2 w-full">
+                              <span class="flex-[0.15]">BRAM</span>
+                              <div class="flex flex-1 items-center justify-between gap-2">
+                                <div class="flex-1 h-1.5 rounded-full bg-black/10 overflow-hidden">
+                                  <div class="h-full rounded-full bg-green-400 transition-all duration-300 resource-bar-fill" style="width: 0%;"></div>
+                                </div>
+                                0%
+                              </div>
+                            </li>
+                            <li class="flex items-center gap-2 w-full">
+                              <span class="flex-[0.15]">DSP48E1</span>
+                              <div class="flex flex-1 items-center justify-between gap-2">
+                                <div class="flex-1 h-1.5 rounded-full bg-black/10 overflow-hidden">
+                                  <div class="h-full rounded-full bg-green-400 transition-all duration-300 resource-bar-fill" style="width: 2.7%;"></div>
+                                </div>
+                                2.7%
+                              </div>
+                            </li>
+                          </ul>
+                          <div class="px-2 pb-1.5 text-[0.65rem] text-neutral-500 border-t border-black/5 pt-1.5">
+                            t<sub>calc</sub> &lt; 10 ns &nbsp;&middot;&nbsp; &Delta;t = 50 ns
+                          </div>
+                        </div>
+                      </div>
+                      <!-- Simulation Results -->
+                      <div class="flex-2 bg-neutral-50 rounded-lg border border-black/5 stage-panel" data-stage="5">
+                        <div class="flex flex-col h-full">
+                          <h5 class="border-b border-black/5 flex items-center p-2 font-medium text-xs shrink-0">Simulation Results</h5>
+                          <div class="p-2 text-xs flex flex-col h-full gap-1.5">
+                            <div class="flex-1 flex flex-col gap-1.5 max-h-32">
+                              <img src="/agentic-hil/buck_waveform_comparison.png" alt="PLECS floating-point reference vs. agent-generated RTL fixed-point trace" class="w-full h-full object-contain object-top">
+                            </div>
+                            <div class="flex items-center gap-1.5 border-t border-black/5 pt-1.5 shrink-0 flex-wrap">
+                              <span class="bg-neutral-100 p-1 rounded-md">v<sub>C</sub> err 16.77 mV</span>
+                              <span class="bg-neutral-100 p-1 rounded-md">i<sub>L</sub> ripple &lt; 5.46 mA</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- Mathematical Model -->
+                    <div class="row-span-6 bg-neutral-50 rounded-lg flex-1 border border-black/5 stage-panel" data-stage="2">
+                      <div class="flex flex-col h-full">
+                        <h5 class="border-b border-black/5 flex items-center p-2 font-medium text-xs">Mathematical Model</h5>
+                        <div class="p-2 text-xs flex flex-col h-full gap-1.5">
+                          <div class="flex-1 flex flex-col gap-1.5 max-h-32 overflow-auto">
+                            <p>State variables:</p>
+                            <math display="block">
+                              <mrow>
+                                <mi>x</mi><mo>=</mo>
+                                <mfenced open="[" close="]"><mtable>
+                                  <mtr><mtd><msub><mi>i</mi><mi>L</mi></msub></mtd></mtr>
+                                  <mtr><mtd><msub><mi>v</mi><mi>C</mi></msub></mtd></mtr>
+                                </mtable></mfenced>
+                              </mrow>
+                            </math>
+                            <p>DCM clamp (diode blocks when i<sub>L</sub> &le; 0): switches to a third topological mode, i<sub>L</sub> held at zero.</p>
+                            <p>Discretization (Forward Euler, T<sub>s</sub> = 50 ns):</p>
+                            <math display="block">
+                              <mrow>
+                                <mi>x</mi><mo>[</mo><mi>k</mi><mo>+</mo><mn>1</mn><mo>]</mo><mo>=</mo>
+                                <msub><mi>A</mi><mi>d</mi></msub><mi>x</mi><mo>[</mo><mi>k</mi><mo>]</mo><mo>+</mo>
+                                <msub><mi>B</mi><mi>d</mi></msub><mi>u</mi><mo>[</mo><mi>k</mi><mo>]</mo>
+                              </mrow>
+                            </math>
+                          </div>
+                          <div class="flex items-center gap-1.5 border-t border-black/5 pt-1.5 flex-wrap">
+                            <span class="bg-neutral-100 p-1 rounded-md">Q6.26 fixed-point</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- Code Generation -->
+                    <div class="row-span-6 bg-neutral-50 rounded-lg flex-1 border border-black/5 stage-panel" data-stage="3">
+                      <div class="flex flex-col h-full">
+                        <h5 class="border-b border-black/5 flex items-center p-2 font-medium text-xs">Code Generation</h5>
+                        <div class="p-2 text-xs flex flex-col h-full gap-1.5">
+                          <div class="flex-1 flex flex-col gap-1.5 max-h-32 overflow-auto bg-neutral-200 rounded-lg">
+                            <code id="code-gen-output" class="h-full w-full font-mono p-2 text-[0.625rem]! whitespace-pre-wrap"></code>
+                          </div>
+                          <div class="flex items-center gap-1.5 border-t border-black/5 pt-1.5">
+                            <span class="whitespace-nowrap text-green-700 p-1 rounded-md">Code Generated</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            </section>
+
+            <footer class="h-44 rounded-lg bg-neutral-50 flex flex-col shrink-0">
+              <h5 class="border-b border-black/5 flex items-center p-2 font-medium text-xs">Logs / Terminal</h5>
+              <div class="grid grid-cols-3 gap-1.5 p-2 w-full h-full overflow-auto">
+                <ul id="log-terminal"
+                  class="p-1 font-mono text-[0.625rem] overflow-auto bg-neutral-200 flex flex-col border border-black/5 rounded-lg"></ul>
+                <div class="grid-cols-2 grid gap-1.5 h-full">
+                  <div class="border border-black/5 rounded-lg stage-panel" data-stage="5">
+                    <h5 class="border-b border-black/5 flex items-center p-1.5 text-xs">Validation</h5>
+                    <ul class="p-1.5 text-[0.65rem] space-y-1">
+                      <li class="flex items-center justify-between gap-1"><span>v<sub>C</sub> error</span><span>16.77 mV</span></li>
+                      <li class="flex items-center justify-between gap-1"><span>i<sub>L</sub> error</span><span>1.52 mA</span></li>
+                      <li class="flex items-center justify-between gap-1"><span>Ripple</span><span>&lt; 5.46 mA</span></li>
+                    </ul>
+                  </div>
+                  <div class="border border-black/5 rounded-lg h-full stage-panel" data-stage="5">
+                    <h5 class="border-b border-black/5 flex items-center p-1.5 text-xs">Key Metrics</h5>
+                    <ul class="p-1.5 text-[0.65rem] space-y-1">
+                      <li class="flex items-center justify-between gap-1"><span>&Delta;t</span><span>50 ns</span></li>
+                      <li class="flex items-center justify-between gap-1"><span>t_calc</span><span>&lt; 10 ns</span></li>
+                      <li class="flex items-center justify-between gap-1"><span>RTL path</span><span>177 lvl</span></li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="border border-black/5 rounded-lg stage-panel overflow-auto" data-stage="5">
+                  <h5 class="border-b border-black/5 flex items-center p-1.5 text-xs">Model Comparison</h5>
+                  <table class="w-full text-[0.65rem]">
+                    <tbody>
+                      <tr class="border-black/5 border-b *:p-1"><td>v<sub>C</sub> mean</td><td>16.77 mV</td></tr>
+                      <tr class="border-black/5 border-b *:p-1"><td>i<sub>L</sub> mean</td><td>1.52 mA</td></tr>
+                      <tr class="*:p-1"><td>i<sub>L</sub> ripple</td><td>&lt; 5.46 mA</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </footer>
+          </div>
+        </div>
+      </section>
+
+      <!-- Results -->
+      <section class="flex flex-col gap-3">
+        <h2>结果</h2>
+        <p>
+          在一台异步 Buck 变换器上验证(24V &rarr; 12V,20 kHz,并且是特意配置成进入断续导通模式)。
+          智能体生成的 RTL 以 Q6.26 定点格式跑在 Zynq-7020 上,稳态下与离线浮点 PLECS 参考的偏差
+          只有 16.77&nbsp;mV(&lt;0.15%),LUT 占用仅 4.28%,每次状态更新在 10&nbsp;ns 内完成
+          &mdash;&mdash; 相对 50&nbsp;ns 的实时预算留有充足余量。
+        </p>
+        <figure class="flex flex-col gap-2 not-prose">
+          <img src="/agentic-hil/buck_waveform_comparison.png"
+            alt="PLECS floating-point reference vs. agent-generated RTL fixed-point trace, with steady-state zoom insets"
+            class="w-full rounded-lg border border-black/5" />
+          <figcaption class="flex items-center gap-4 flex-wrap text-xs text-neutral-500">
+            <span class="inline-flex items-center gap-1.5">
+              <span class="inline-block w-4 h-0.5" style="background-color: #a3a3a3;"></span>
+              浮点参考(PLECS)
+            </span>
+            <span class="inline-flex items-center gap-1.5">
+              <span class="inline-block w-4 h-0.5" style="background-color: #3b82f6;"></span>
+              智能体生成的定点 RTL
+            </span>
+            <span class="text-neutral-400">&mdash;&mdash; 本页所有图表都使用同一套配色。</span>
+          </figcaption>
+        </figure>
+      </section>
+
+      <!-- Footer -->
+      <footer class="flex items-center gap-4 text-sm pt-4 border-t border-black/5">
+        <a href="/agentic-hil/kiosk/" class="text-blue-600 hover:underline">全屏演示版 &rarr;</a>
+        <a href="/zh/" class="text-blue-600 hover:underline">&larr; 返回主页</a>
+      </footer>
+
+    </main>
+    <script src="/agentic-hil/script.js"></script>
+    <script>
+      // Chinese strings for the shared widgets.js implementation.
+      window.HIL_STRINGS = {
+        unitNano: 'nV / nA',
+        unitMicro: 'µV / µA',
+        unitMilli: 'mV / mA',
+        qfOverflow: '会溢出 —— 量程只到 ±{range} V,但启动暂态会冲到 {peak} V',
+        qfWasteful: '不会溢出,但余量是实际需要的 {factor} 倍 —— 这些位宽本可以换成分辨率',
+        qfFits: '量程刚好覆盖信号,余量合理',
+        buckAxis: '时间 → (3 个开关周期,稳态)',
+        buckNegative:
+          '电感电流跌到了 {min} A —— 物理上不可能。二极管会阻断反向电流,而时不变的状态空间模型并不知道这件事。',
+        buckDcm:
+          '断续导通(DCM):电流触零后被钳位在零,直到开关再次导通。这正是智能体必须识别并建模的模式。',
+        buckCcm:
+          '连续导通(CCM):电流始终不到零,每个开关状态用一组状态空间模型就够了。调大 R 或调小 L 可以把它推进 DCM。',
+        budgetMiss: '赶不上实时 —— 步长比数据通路需要的 {tcalc} ns 还短。',
+        budgetOk: '时序满足,还剩 {slack} ns 余量 —— 用掉了步长预算的 {pct}%。',
+      };
+    </script>
+    <script src="/agentic-hil/widgets.js"></script>
+    <script>
+      // BibTeX toggle.
+      (() => {
+        const btn = document.getElementById('bibtex-toggle');
+        const block = document.getElementById('bibtex-block');
+        if (btn && block) {
+          btn.addEventListener('click', () => block.classList.toggle('hidden'));
+        }
+      })();
+
+      // Capability tabs (independent of the dashboard demo's script.js).
+      (() => {
+        const tabs = document.querySelectorAll('.capability-tab');
+        const panels = document.querySelectorAll('.capability-panel');
+        tabs.forEach((tab) => {
+          tab.addEventListener('click', () => {
+            const cap = tab.dataset.cap;
+            tabs.forEach((t) => {
+              t.classList.toggle('bg-blue-500', t === tab);
+              t.classList.toggle('text-white', t === tab);
+              t.classList.toggle('bg-neutral-100', t !== tab);
+              t.classList.toggle('text-neutral-600', t !== tab);
+            });
+            panels.forEach((p) => {
+              const active = p.dataset.cap === cap;
+              p.classList.toggle('hidden', !active);
+              p.classList.toggle('flex', active);
+            });
+          });
+        });
+      })();
+    </script>
+  </body>
+
+</html>

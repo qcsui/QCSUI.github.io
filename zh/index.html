@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 
   <head>
     <meta charset="UTF-8" />
@@ -7,7 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <title>Qingcheng Sui</title>
     <meta name="description"
-      content="Qingcheng Sui — KU Leuven, EnergyVille. Research on agentic AI for real-time power electronics simulation." />
+      content="Qingcheng Sui — KU Leuven, EnergyVille。研究方向:电力电子的模型预测控制、AI 与实时仿真建模。" />
     <link rel="alternate" hreflang="en" href="https://qcsui.github.io/" />
     <link rel="alternate" hreflang="zh" href="https://qcsui.github.io/zh/" />
   </head>
@@ -17,20 +17,20 @@
 
       <!-- Language switcher -->
       <div class="flex justify-end gap-2 text-sm -mb-10">
-        <span class="text-neutral-800 font-medium">EN</span>
+        <a href="../" class="text-blue-600 hover:underline">EN</a>
         <span class="text-neutral-300">/</span>
-        <a href="./zh/" class="text-blue-600 hover:underline">中文</a>
+        <span class="text-neutral-800 font-medium">中文</span>
       </div>
 
       <!-- Hero -->
       <section class="flex items-center gap-6 flex-wrap">
-        <img src="./images/avatar.jpg" alt="Qingcheng Sui"
+        <img src="/images/avatar.jpg" alt="Qingcheng Sui"
           class="size-24 rounded-full object-cover border border-black/10" />
         <div class="flex flex-col gap-1">
           <h1 class="text-3xl font-medium">Qingcheng Sui</h1>
           <p class="text-neutral-500">KU Leuven &mdash; EnergyVille</p>
           <div class="flex items-center gap-3 text-sm mt-1">
-            <a href="mailto:qingcheng.sui@foxmail.com" class="text-blue-600 hover:underline">Email</a>
+            <a href="mailto:qingcheng.sui@foxmail.com" class="text-blue-600 hover:underline">邮箱</a>
             <a href="https://github.com/qcsui" class="text-blue-600 hover:underline">GitHub</a>
           </div>
         </div>
@@ -38,31 +38,30 @@
 
       <!-- About -->
       <section class="flex flex-col gap-2.5">
-        <h2 class="text-xs font-medium uppercase tracking-wide text-neutral-400">About</h2>
+        <h2 class="text-xs font-medium uppercase tracking-wide text-neutral-400">关于</h2>
         <p class="text-base leading-relaxed">
-          I work on model predictive control, AI, and modeling for power electronics at
-          KU Leuven &ndash; EnergyVille, including multi-agent LLM systems that turn circuit
-          topologies into verified, FPGA-deployable hardware-in-the-loop simulators.
+          我在 KU Leuven &ndash; EnergyVille 从事电力电子方向的模型预测控制、AI 与建模研究,
+          其中包括用多智能体 LLM 系统把电路拓扑自动转换成经过验证、可部署到 FPGA 的
+          硬件在环(HIL)实时仿真器。
         </p>
       </section>
 
       <!-- Projects -->
       <section class="flex flex-col gap-3">
-        <h2 class="text-xs font-medium uppercase tracking-wide text-neutral-400">Projects</h2>
+        <h2 class="text-xs font-medium uppercase tracking-wide text-neutral-400">项目</h2>
         <a href="./agentic-hil/"
           class="group bg-neutral-50 border border-black/5 rounded-lg p-4 flex flex-col gap-2.5 hover:border-blue-300 transition-colors">
           <div class="flex items-center justify-between flex-wrap gap-2">
             <h3 class="font-medium text-lg group-hover:text-blue-600">Agentic HIL</h3>
-            <span class="text-xs bg-neutral-100 px-2 py-0.5 rounded-full text-neutral-500">Interactive demo &rarr;</span>
+            <span class="text-xs bg-neutral-100 px-2 py-0.5 rounded-full text-neutral-500">交互式演示 &rarr;</span>
           </div>
           <p class="text-sm text-neutral-600">
-            A multi-agent LLM framework that autonomously generates FPGA-based real-time
-            power electronics simulators &mdash; from a circuit topology straight to a
-            verified, deployable HIL solver, no HDL expertise required.
+            一个多智能体 LLM 框架,能自动生成基于 FPGA 的电力电子实时仿真器 &mdash;&mdash;
+            从电路拓扑直接得到经过验证、可部署的 HIL 求解器,不需要 HDL 经验。
           </p>
           <div class="flex items-center gap-1.5 flex-wrap text-xs">
-            <span class="bg-neutral-100 px-2 py-1 rounded-md">v<sub>C</sub> SS error 16.77 mV (&lt;0.15%)</span>
-            <span class="bg-neutral-100 px-2 py-1 rounded-md">4.28% LUT</span>
+            <span class="bg-neutral-100 px-2 py-1 rounded-md">v<sub>C</sub> 稳态误差 16.77 mV(&lt;0.15%)</span>
+            <span class="bg-neutral-100 px-2 py-1 rounded-md">LUT 占用 4.28%</span>
             <span class="bg-neutral-100 px-2 py-1 rounded-md">Q6.26</span>
             <span class="bg-neutral-100 px-2 py-1 rounded-md">Zynq-7020</span>
           </div>
@@ -71,10 +70,10 @@
 
       <!-- Publications -->
       <section class="flex flex-col gap-3">
-        <h2 class="text-xs font-medium uppercase tracking-wide text-neutral-400">Publications</h2>
+        <h2 class="text-xs font-medium uppercase tracking-wide text-neutral-400">论文</h2>
         <div class="flex flex-col gap-1">
           <p class="text-base leading-snug">
-            Agentic HIL: A Multi-Agent LLM Framework for Autonomous Generation of
+            Agentic HiL: A Multi-Agent LLM Framework for Autonomous Generation of
             FPGA-based Real-Time Power Electronics Simulators
           </p>
           <p class="text-sm text-neutral-500">
@@ -82,7 +81,7 @@
             KU Leuven, EnergyVille
           </p>
           <p class="text-sm">
-            <span class="bg-green-50 text-green-700 px-2 py-0.5 rounded-full text-xs font-medium">Accepted</span>
+            <span class="bg-green-50 text-green-700 px-2 py-0.5 rounded-full text-xs font-medium">已录用</span>
             <span class="text-neutral-500">&middot; ECCE 2026</span>
           </p>
         </div>
@@ -90,7 +89,7 @@
 
       <!-- Contact -->
       <section class="flex flex-col gap-2.5 pb-6">
-        <h2 class="text-xs font-medium uppercase tracking-wide text-neutral-400">Contact</h2>
+        <h2 class="text-xs font-medium uppercase tracking-wide text-neutral-400">联系</h2>
         <p class="text-sm text-neutral-600">
           <a href="mailto:qingcheng.sui@foxmail.com" class="text-blue-600 hover:underline">qingcheng.sui@foxmail.com</a>
           &nbsp;&middot;&nbsp;
