@@ -23,9 +23,9 @@
     unitNano: 'nV / nA',
     unitMicro: 'µV / µA',
     unitMilli: 'mV / mA',
-    qfOverflow: 'Overflows — clips at ±{range} V, but the startup transient reaches {peak} V',
-    qfWasteful: 'Safe, but {factor}× more headroom than needed — those bits would buy resolution instead',
-    qfFits: 'Fits the signal range with sensible headroom',
+    qfSelected: 'The format the agent picked: {err} mV of error for {dsp} DSP slice(s).',
+    qfTooNarrow: 'Too narrow. Error climbs to {err} mV, an order of magnitude worse, for no saving in DSP slices.',
+    qfTooWide: 'Halves the error to {err} mV, but it now costs {dsp} DSP slices instead of one.',
     buckAxis: 'time → (3 switching periods, steady state)',
     buckNegative:
       'Inductor current goes to {min} A — physically impossible. The diode would block reverse current; a time-invariant state-space model does not know that.',
@@ -70,68 +70,104 @@
   }
 
   // -------------------------------------------------------------------------
-  // Widget A — Q-format explorer
+  // Widget A — Q-format sweep
   //
-  // Signed fixed point, 32 bits total. `intBits` includes the sign bit, so the
-  // representable range is ±2^(intBits-1) and the resolution is 2^-fracBits.
-  // The signal ranges below are the peak values the buck converter actually
-  // reaches during startup (see the waveform figure further down the page).
+  // This reproduces Tables tab:buck_quant and tab:boost_quant of the paper.
+  // Range and resolution are computed here from first principles: signed fixed
+  // point with `int` bits including the sign gives a range of ±2^(int-1) and a
+  // resolution of 2^-frac. The error and DSP columns are the paper's measured
+  // values for that row, which cannot be derived from bit width alone.
+  //
+  // Cross-check: int=7 gives ±64 and int=9 gives ±256, matching the ±64 V and
+  // ±256 V the paper states for buck and boost.
   // -------------------------------------------------------------------------
-  const PEAK_VC = 22.5; // V, output-voltage overshoot at startup
-  const PEAK_IL = 13.7; // A, inductor-current peak at startup
+  const SWEEPS = {
+    buck: {
+      intBits: 7,
+      selected: 24,
+      // [total width, label, measured error mV, DSP slices]
+      rows: [
+        [20, 'Q7.13', 97.2, 1],
+        [24, 'Q7.17', 4.87, 1],
+        [28, 'Q7.21', 0.56, 2],
+        [32, 'Q7.25', 0.56, 2],
+      ],
+    },
+    boost: {
+      intBits: 9,
+      selected: 24,
+      rows: [
+        [22, 'Q9.13', 40.8, 1],
+        [24, 'Q9.15', 7.45, 1],
+        [28, 'Q9.19', 3.39, 2],
+        [32, 'Q9.23', 3.02, 2],
+      ],
+    },
+  };
 
   function initQFormat() {
     const root = document.getElementById('qformat-widget');
     if (!root) return;
     const slider = root.querySelector('#qformat-slider');
+    if (!slider) return;
     const out = {
       label: root.querySelector('#qformat-label'),
       range: root.querySelector('#qformat-range'),
       res: root.querySelector('#qformat-res'),
+      err: root.querySelector('#qformat-err'),
+      dsp: root.querySelector('#qformat-dsp'),
       verdict: root.querySelector('#qformat-verdict'),
-      bar: root.querySelector('#qformat-bar'),
+      width: root.querySelector('#qformat-width'),
     };
-    if (!slider) return;
+    const topoInputs = Array.from(root.querySelectorAll('input[name="qformat-topo"]'));
+
+    function currentTopology() {
+      const checked = topoInputs.find((i) => i.checked);
+      return checked ? checked.value : 'buck';
+    }
 
     function render() {
-      const intBits = Number(slider.value);
-      const fracBits = 32 - intBits;
-      const range = Math.pow(2, intBits - 1);
-      const res = Math.pow(2, -fracBits);
+      const sweep = SWEEPS[currentTopology()];
+      slider.max = String(sweep.rows.length - 1);
+      const idx = Math.min(Number(slider.value), sweep.rows.length - 1);
+      const [width, label, errMv, dsp] = sweep.rows[idx];
+      const frac = width - sweep.intBits;
+      const range = Math.pow(2, sweep.intBits - 1);
+      const res = Math.pow(2, -frac);
 
-      out.label.textContent = 'Q' + intBits + '.' + fracBits;
-      out.range.textContent = '±' + range.toLocaleString();
-
-      // Show resolution in whatever unit reads naturally.
-      let resText;
-      if (res < 1e-6) resText = (res * 1e9).toFixed(1) + ' ' + t('unitNano');
-      else if (res < 1e-3) resText = (res * 1e6).toFixed(1) + ' ' + t('unitMicro');
-      else resText = (res * 1e3).toFixed(2) + ' ' + t('unitMilli');
-      out.res.textContent = resText;
-
-      // Verdict: does it hold the real signal peaks, and how much is wasted?
-      const needed = Math.max(PEAK_VC, PEAK_IL);
-      let verdict, color;
-      if (range < needed) {
-        verdict = t('qfOverflow', { range: range, peak: PEAK_VC });
-        color = COLOR.bad;
-      } else if (range > needed * 8) {
-        verdict = t('qfWasteful', { factor: Math.round(range / needed) });
-        color = COLOR.axis;
-      } else {
-        verdict = t('qfFits');
-        color = COLOR.ok;
+      if (out.label) out.label.textContent = label;
+      if (out.width) out.width.textContent = width + '-bit';
+      if (out.range) out.range.textContent = '±' + range.toLocaleString();
+      if (out.res) {
+        let txt;
+        if (res < 1e-6) txt = (res * 1e9).toFixed(1) + ' ' + t('unitNano');
+        else if (res < 1e-3) txt = (res * 1e6).toFixed(1) + ' ' + t('unitMicro');
+        else txt = (res * 1e3).toFixed(2) + ' ' + t('unitMilli');
+        out.res.textContent = txt;
       }
-      out.verdict.textContent = verdict;
-      out.verdict.style.color = color;
+      if (out.err) out.err.textContent = errMv + ' mV';
+      if (out.dsp) out.dsp.textContent = dsp + (dsp === 1 ? ' slice' : ' slices');
 
-      // Headroom bar: signal peak vs. representable range (log-ish scale).
-      const frac = Math.min(1, needed / range);
-      out.bar.style.width = (frac * 100).toFixed(1) + '%';
-      out.bar.style.backgroundColor = range < needed ? COLOR.bad : COLOR.rtl;
+      if (out.verdict) {
+        let key;
+        if (width === sweep.selected) key = 'qfSelected';
+        else if (width < sweep.selected) key = 'qfTooNarrow';
+        else key = 'qfTooWide';
+        out.verdict.textContent = t(key, { err: errMv, dsp: dsp });
+        out.verdict.style.color =
+          key === 'qfSelected' ? COLOR.ok : key === 'qfTooNarrow' ? COLOR.bad : COLOR.axis;
+      }
     }
 
     slider.addEventListener('input', render);
+    topoInputs.forEach((i) =>
+      i.addEventListener('change', () => {
+        // land on the selected row when switching topology
+        const sweep = SWEEPS[currentTopology()];
+        slider.value = String(sweep.rows.findIndex((r) => r[0] === sweep.selected));
+        render();
+      })
+    );
     render();
   }
 

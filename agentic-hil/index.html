@@ -193,35 +193,47 @@
             </p>
             <div class="flex items-center gap-1.5 flex-wrap text-xs">
               <span class="bg-white border border-black/5 px-2 py-1 rounded-md">Output: model_fixed.c (Golden Reference)</span>
-              <span class="bg-white border border-black/5 px-2 py-1 rounded-md">Format found: Q6.26</span>
+              <span class="bg-white border border-black/5 px-2 py-1 rounded-md">Buck: Q7.17 &middot; Boost: Q9.15</span>
             </div>
 
             <!-- Interactive: Q-format explorer -->
             <div id="qformat-widget" class="bg-white border border-black/5 rounded-lg p-3 flex flex-col gap-2.5 mt-1">
               <p class="text-xs text-neutral-500">
-                Try it: 32 bits total, drag to move the split between integer and fractional bits.
-                The signal has to fit in the range, and whatever is left over buys resolution.
+                Try it: this is the sweep the Physics Agent actually runs, for both validated
+                topologies. Range and resolution are computed from the bit allocation; the error
+                and DSP columns are the measured results reported in the paper.
               </p>
-              <div class="flex items-center gap-3 flex-wrap">
-                <input type="range" id="qformat-slider" min="2" max="16" value="6" step="1" class="flex-1 min-w-40" />
-                <span id="qformat-label" class="font-mono text-sm font-medium w-20">Q6.26</span>
+              <div class="flex items-center gap-4 text-xs">
+                <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                  <input type="radio" name="qformat-topo" value="buck" checked class="accent-blue-500" />
+                  <span>Buck</span>
+                </label>
+                <label class="inline-flex items-center gap-1.5 cursor-pointer">
+                  <input type="radio" name="qformat-topo" value="boost" class="accent-blue-500" />
+                  <span>Boost</span>
+                </label>
               </div>
-              <div class="grid grid-cols-2 gap-3 text-xs">
+              <div class="flex items-center gap-3 flex-wrap">
+                <input type="range" id="qformat-slider" min="0" max="3" value="1" step="1" class="flex-1 min-w-40" />
+                <span id="qformat-label" class="font-mono text-sm font-medium w-16">Q7.17</span>
+                <span id="qformat-width" class="text-xs text-neutral-400 w-14">24-bit</span>
+              </div>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                 <div class="flex flex-col gap-0.5">
                   <span class="text-neutral-400">Range</span>
-                  <span id="qformat-range" class="font-mono">±32</span>
+                  <span id="qformat-range" class="font-mono">±64</span>
                 </div>
                 <div class="flex flex-col gap-0.5">
                   <span class="text-neutral-400">Resolution</span>
-                  <span id="qformat-res" class="font-mono">14.9 nV / nA</span>
+                  <span id="qformat-res" class="font-mono">7.6 µV / µA</span>
                 </div>
-              </div>
-              <div class="flex flex-col gap-1">
-                <div class="flex items-center justify-between text-[0.65rem] text-neutral-400">
-                  <span>signal peak (22.5 V startup overshoot) vs. representable range</span>
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-neutral-400">Measured error</span>
+                  <span id="qformat-err" class="font-mono">4.87 mV</span>
                 </div>
-                <div class="w-full h-2 rounded-full bg-neutral-100 overflow-hidden">
-                  <div id="qformat-bar" class="h-full rounded-full transition-all duration-150" style="width: 70%; background-color: #3b82f6;"></div>
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-neutral-400">Cost</span>
+                  <span id="qformat-dsp" class="font-mono">1 slice</span>
                 </div>
               </div>
               <p id="qformat-verdict" class="text-xs"></p>
@@ -245,17 +257,17 @@
           <div class="capability-panel hidden flex-col gap-2" data-cap="3">
             <h3 class="font-medium text-lg">Latency-first architecture optimization</h3>
             <p class="text-sm leading-relaxed text-neutral-700">
-              Conventional digital-design agents chase throughput with deep pipelines &mdash;
-              exactly the wrong instinct for a HiL solver, where the goal is minimizing
-              t<sub>calc</sub>, not maximizing clock frequency. The Hardware Agent instead maps
-              independent state equations onto parallel DSP blocks and keeps the datapath
-              flattened and combinational, so latency stays far below the real-time step
-              &Delta;t.
+              Conventional digital-design agents chase throughput with deep pipelines, which is
+              the wrong instinct for a HiL solver: the goal is minimising t<sub>calc</sub>, not
+              maximising clock frequency. The Hardware Agent instead searches for the
+              <em>minimum</em> pipeline depth that still closes timing. Buck needs four stages
+              (22.2 ns latency, 5.6 ns critical path); Boost closes in a single cycle at
+              5.56 ns with no DSP slices at all.
             </p>
             <div class="flex items-center gap-1.5 flex-wrap text-xs">
-              <span class="bg-white border border-black/5 px-2 py-1 rounded-md">t<sub>calc</sub> &lt; 10 ns</span>
+              <span class="bg-white border border-black/5 px-2 py-1 rounded-md">pipeline latency 22.2 ns</span>
+              <span class="bg-white border border-black/5 px-2 py-1 rounded-md">critical path 5.6 ns</span>
               <span class="bg-white border border-black/5 px-2 py-1 rounded-md">&Delta;t = 50 ns</span>
-              <span class="bg-white border border-black/5 px-2 py-1 rounded-md">177 levels, unrolled combinational</span>
             </div>
 
             <!-- Interactive: real-time budget -->
@@ -303,7 +315,7 @@
               with room to spare.
             </p>
             <div class="flex items-center gap-1.5 flex-wrap text-xs">
-              <span class="bg-white border border-black/5 px-2 py-1 rounded-md">4.28% LUT</span>
+              <span class="bg-white border border-black/5 px-2 py-1 rounded-md">0.29% LUT</span>
               <span class="bg-white border border-black/5 px-2 py-1 rounded-md">2.7% DSP48E1</span>
               <span class="bg-white border border-black/5 px-2 py-1 rounded-md">0% BRAM</span>
             </div>
@@ -450,8 +462,9 @@
             <!-- Trimmed toolbar: project + Run Simulation only -->
             <header
               class="h-12 shrink-0 bg-neutral-50 border border-black/5 w-full rounded-lg flex items-center justify-between px-2.5">
-              <select name="" id="" class="outline-none border border-black/5 p-1 h-8 rounded-md text-xs">
-                <option value="buck_converter">Project: buck_converter</option>
+              <select id="topology-select" class="outline-none border border-black/5 p-1 h-8 rounded-md text-xs">
+                <option value="buck">Project: buck_converter</option>
+                <option value="boost">Project: boost_converter</option>
               </select>
               <button type="button" id="run-simulation-btn"
                 class="bg-blue-500 px-3 py-1.5 rounded-md text-white inline-flex items-center gap-1.5 h-8 text-xs">
@@ -594,14 +607,8 @@
                       <div class="flex flex-col h-full">
                         <h5 class="border-b border-black/5 flex items-center p-2 font-medium text-xs">System Topology</h5>
                         <div class="p-2 text-xs flex flex-col h-full gap-1.5">
-                          <div class="flex-1 flex items-start max-h-32 overflow-auto bg-white">
-                            <img src="./buck_circuit_plecs.png" alt="Buck converter topology (PLECS)" class="w-full h-full object-contain object-top">
-                          </div>
-                          <div class="flex items-center gap-1.5 border-t border-black/5 pt-1.5 flex-wrap">
-                            <span class="bg-neutral-100 p-1 rounded-md">Asynchronous Buck</span>
-                            <span class="bg-neutral-100 p-1 rounded-md">CCM + DCM</span>
-                            <span class="bg-neutral-100 p-1 rounded-md">20 kHz</span>
-                          </div>
+                          <div id="topology-figure" class="flex-1 flex items-start max-h-32 overflow-auto bg-white"></div>
+                          <div id="topology-tags" class="flex items-center gap-1.5 border-t border-black/5 pt-1.5 flex-wrap"></div>
                         </div>
                       </div>
                     </div>
@@ -611,12 +618,9 @@
                         <h5 class="border-b border-black/5 flex items-center p-2 font-medium text-xs">Control Signals</h5>
                         <div class="p-2 text-xs flex flex-col h-full gap-1.5">
                           <div class="flex-1 flex items-start max-h-32 overflow-auto bg-white">
-                            <img src="./buck_converter_switching_patterns.png" alt="Buck converter switching waveforms" class="w-full h-full object-contain object-top">
+                            <img src="/agentic-hil/buck_converter_switching_patterns.png" alt="Buck converter switching waveforms" class="w-full h-full object-contain object-top">
                           </div>
-                          <div class="flex items-center gap-1.5 border-t border-black/5 pt-1.5 flex-wrap">
-                            <span class="bg-neutral-100 p-1 rounded-md">D = 0.5</span>
-                            <span class="bg-neutral-100 p-1 rounded-md">20 kHz</span>
-                          </div>
+                          <div id="control-tags" class="flex items-center gap-1.5 border-t border-black/5 pt-1.5 flex-wrap"></div>
                         </div>
                       </div>
                     </div>
@@ -625,15 +629,7 @@
                       <div class="flex flex-col h-full">
                         <h5 class="border-b border-black/5 flex items-center p-2 font-medium text-xs">Design Summary</h5>
                         <div class="p-2 text-xs flex flex-col h-full gap-1.5">
-                          <ul class="w-full space-y-1.5 overflow-auto max-h-32">
-                            <li class="grid grid-cols-2"><span class="opacity-70">Input Voltage</span><span>24 V</span></li>
-                            <li class="grid grid-cols-2"><span class="opacity-70">Inductance L<sub>o</sub></span><span>100 &micro;H</span></li>
-                            <li class="grid grid-cols-2"><span class="opacity-70">Capacitance C<sub>o</sub></span><span>100 &micro;F</span></li>
-                            <li class="grid grid-cols-2"><span class="opacity-70">Load Resistance</span><span>10 &Omega;</span></li>
-                            <li class="grid grid-cols-2"><span class="opacity-70">Target Platform</span><span>Zynq-7020</span></li>
-                            <li class="grid grid-cols-2"><span class="opacity-70">Time Step (&Delta;t)</span><span>50 ns</span></li>
-                            <li class="grid grid-cols-2"><span class="opacity-70">Fixed-Point Format</span><span>Q6.26</span></li>
-                          </ul>
+                          <ul id="design-summary-list" class="w-full space-y-1.5 overflow-auto max-h-32"></ul>
                         </div>
                       </div>
                     </div>
@@ -642,61 +638,17 @@
                       <div class="flex-1 bg-neutral-50 rounded-lg border border-black/5 stage-panel" data-stage="4">
                         <div class="flex flex-col h-full overflow-hidden">
                           <h5 class="border-b border-black/5 flex items-center p-2 font-medium text-xs">Resource Usage</h5>
-                          <ul class="p-2 text-xs grid gap-1">
-                            <li class="flex items-center justify-between gap-2 w-full">
-                              <span class="flex-[0.15]">LUT</span>
-                              <div class="flex flex-1 items-center justify-between gap-2">
-                                <div class="flex-1 h-1.5 rounded-full bg-black/10 overflow-hidden">
-                                  <div class="h-full rounded-full bg-green-400 transition-all duration-300 resource-bar-fill" style="width: 4.28%;"></div>
-                                </div>
-                                4.28%
-                              </div>
-                            </li>
-                            <li class="flex items-center justify-between gap-2 w-full">
-                              <span class="flex-[0.15]">FF</span>
-                              <div class="flex flex-1 items-center justify-between gap-2">
-                                <div class="flex-1 h-1.5 rounded-full bg-black/10 overflow-hidden">
-                                  <div class="h-full rounded-full bg-green-400 transition-all duration-300 resource-bar-fill" style="width: 0.5%;"></div>
-                                </div>
-                                &lt;0.1%
-                              </div>
-                            </li>
-                            <li class="flex items-center gap-2 w-full">
-                              <span class="flex-[0.15]">BRAM</span>
-                              <div class="flex flex-1 items-center justify-between gap-2">
-                                <div class="flex-1 h-1.5 rounded-full bg-black/10 overflow-hidden">
-                                  <div class="h-full rounded-full bg-green-400 transition-all duration-300 resource-bar-fill" style="width: 0%;"></div>
-                                </div>
-                                0%
-                              </div>
-                            </li>
-                            <li class="flex items-center gap-2 w-full">
-                              <span class="flex-[0.15]">DSP48E1</span>
-                              <div class="flex flex-1 items-center justify-between gap-2">
-                                <div class="flex-1 h-1.5 rounded-full bg-black/10 overflow-hidden">
-                                  <div class="h-full rounded-full bg-green-400 transition-all duration-300 resource-bar-fill" style="width: 2.7%;"></div>
-                                </div>
-                                2.7%
-                              </div>
-                            </li>
-                          </ul>
-                          <div class="px-2 pb-1.5 text-[0.65rem] text-neutral-500 border-t border-black/5 pt-1.5">
-                            t<sub>calc</sub> &lt; 10 ns &nbsp;&middot;&nbsp; &Delta;t = 50 ns
-                          </div>
+                          <ul id="resource-list" class="p-2 text-xs grid gap-1"></ul>
+                          <div id="resource-note" class="px-2 pb-1.5 text-[0.65rem] text-neutral-500 border-t border-black/5 pt-1.5"></div>
                         </div>
                       </div>
                       <!-- Simulation Results -->
                       <div class="flex-2 bg-neutral-50 rounded-lg border border-black/5 stage-panel" data-stage="5">
                         <div class="flex flex-col h-full">
-                          <h5 class="border-b border-black/5 flex items-center p-2 font-medium text-xs shrink-0">Simulation Results</h5>
+                          <h5 class="border-b border-black/5 flex items-center p-2 font-medium text-xs shrink-0">Measured on hardware</h5>
                           <div class="p-2 text-xs flex flex-col h-full gap-1.5">
-                            <div class="flex-1 flex flex-col gap-1.5 max-h-32">
-                              <img src="./buck_waveform_comparison.png" alt="PLECS floating-point reference vs. agent-generated RTL fixed-point trace" class="w-full h-full object-contain object-top">
-                            </div>
-                            <div class="flex items-center gap-1.5 border-t border-black/5 pt-1.5 shrink-0 flex-wrap">
-                              <span class="bg-neutral-100 p-1 rounded-md">v<sub>C</sub> err 16.77 mV</span>
-                              <span class="bg-neutral-100 p-1 rounded-md">i<sub>L</sub> ripple &lt; 5.46 mA</span>
-                            </div>
+                            <div id="scope-figure" class="flex-1 flex flex-col gap-1.5 max-h-32"></div>
+                            <div id="scope-tags" class="flex items-center gap-1.5 border-t border-black/5 pt-1.5 shrink-0 flex-wrap"></div>
                           </div>
                         </div>
                       </div>
@@ -717,7 +669,7 @@
                                 </mtable></mfenced>
                               </mrow>
                             </math>
-                            <p>DCM clamp (diode blocks when i<sub>L</sub> &le; 0): switches to a third topological mode, i<sub>L</sub> held at zero.</p>
+                            <p id="math-note"></p>
                             <p>Discretization (Forward Euler, T<sub>s</sub> = 50 ns):</p>
                             <math display="block">
                               <mrow>
@@ -727,9 +679,7 @@
                               </mrow>
                             </math>
                           </div>
-                          <div class="flex items-center gap-1.5 border-t border-black/5 pt-1.5 flex-wrap">
-                            <span class="bg-neutral-100 p-1 rounded-md">Q6.26 fixed-point</span>
-                          </div>
+                          
                         </div>
                       </div>
                     </div>
@@ -757,32 +707,14 @@
               <div class="grid grid-cols-3 gap-1.5 p-2 w-full h-full overflow-auto">
                 <ul id="log-terminal"
                   class="p-1 font-mono text-[0.625rem] overflow-auto bg-neutral-200 flex flex-col border border-black/5 rounded-lg"></ul>
-                <div class="grid-cols-2 grid gap-1.5 h-full">
-                  <div class="border border-black/5 rounded-lg stage-panel" data-stage="5">
-                    <h5 class="border-b border-black/5 flex items-center p-1.5 text-xs">Validation</h5>
-                    <ul class="p-1.5 text-[0.65rem] space-y-1">
-                      <li class="flex items-center justify-between gap-1"><span>v<sub>C</sub> error</span><span>16.77 mV</span></li>
-                      <li class="flex items-center justify-between gap-1"><span>i<sub>L</sub> error</span><span>1.52 mA</span></li>
-                      <li class="flex items-center justify-between gap-1"><span>Ripple</span><span>&lt; 5.46 mA</span></li>
-                    </ul>
-                  </div>
-                  <div class="border border-black/5 rounded-lg h-full stage-panel" data-stage="5">
-                    <h5 class="border-b border-black/5 flex items-center p-1.5 text-xs">Key Metrics</h5>
-                    <ul class="p-1.5 text-[0.65rem] space-y-1">
-                      <li class="flex items-center justify-between gap-1"><span>&Delta;t</span><span>50 ns</span></li>
-                      <li class="flex items-center justify-between gap-1"><span>t_calc</span><span>&lt; 10 ns</span></li>
-                      <li class="flex items-center justify-between gap-1"><span>RTL path</span><span>177 lvl</span></li>
-                    </ul>
-                  </div>
+                <div class="border border-black/5 rounded-lg h-full stage-panel overflow-auto" data-stage="5">
+                  <h5 class="border-b border-black/5 flex items-center p-1.5 text-xs">Key Metrics</h5>
+                  <ul id="metrics-list" class="p-1.5 text-[0.65rem] space-y-1"></ul>
                 </div>
                 <div class="border border-black/5 rounded-lg stage-panel overflow-auto" data-stage="5">
-                  <h5 class="border-b border-black/5 flex items-center p-1.5 text-xs">Model Comparison</h5>
+                  <h5 class="border-b border-black/5 flex items-center p-1.5 text-xs">Validation</h5>
                   <table class="w-full text-[0.65rem]">
-                    <tbody>
-                      <tr class="border-black/5 border-b *:p-1"><td>v<sub>C</sub> mean</td><td>16.77 mV</td></tr>
-                      <tr class="border-black/5 border-b *:p-1"><td>i<sub>L</sub> mean</td><td>1.52 mA</td></tr>
-                      <tr class="*:p-1"><td>i<sub>L</sub> ripple</td><td>&lt; 5.46 mA</td></tr>
-                    </tbody>
+                    <tbody id="comparison-body"></tbody>
                   </table>
                 </div>
               </div>
@@ -795,27 +727,37 @@
       <section class="flex flex-col gap-3">
         <h2>Results</h2>
         <p>
-          Validated on an asynchronous buck converter (24V &rarr; 12V, 20 kHz, deliberately driven
-          into discontinuous conduction mode). The agent-generated RTL, running in Q6.26 fixed
-          point on a Zynq-7020, matches the offline floating-point PLECS reference to within
-          16.77&nbsp;mV (&lt;0.15%) at steady state, using just 4.28% of the LUTs and completing
-          each state update in under 10&nbsp;ns &mdash; comfortably inside the 50&nbsp;ns real-time
-          budget.
+          Two topologies were validated on a Zynq-7020. The <strong>buck</strong> converter
+          (24 V to 12 V, 20 kHz) is deliberately driven into discontinuous conduction; in Q7.17
+          its RTL tracks the PLECS reference to 4.87&nbsp;mV, under 0.04%, using 156 LUTs
+          (0.29%) and 3 DSP slices, with 22.2&nbsp;ns of pipeline latency against the
+          50&nbsp;ns step. The <strong>boost</strong> converter (100 V to 200 V, L = 1 mH,
+          C = 470 µF, R = 20 Ω) stays in continuous conduction but is badly underdamped
+          (ζ ≈ 0.036, τ ≈ 18.8 ms), which stresses the solver over long horizons. In Q9.15 it
+          settles at 201.9448&nbsp;V and needs only 61 LUTs and no DSP slices at all, closing
+          timing single-cycle at 5.56&nbsp;ns.
+        </p>
+        <p>
+          Underneath both, the three numerical formulations the Physics Agent cross-checks
+          against each other (state-space with forward Euler, with backward Euler, and
+          ADC+MNA) agree to 0.19&nbsp;mV on buck and 2.98&nbsp;mV on boost.
         </p>
         <figure class="flex flex-col gap-2 not-prose">
-          <img src="./buck_waveform_comparison.png"
-            alt="PLECS floating-point reference vs. agent-generated RTL fixed-point trace, with steady-state zoom insets"
-            class="w-full rounded-lg border border-black/5" />
-          <figcaption class="flex items-center gap-4 flex-wrap text-xs text-neutral-500">
-            <span class="inline-flex items-center gap-1.5">
-              <span class="inline-block w-4 h-0.5" style="background-color: #a3a3a3;"></span>
-              Floating-point reference (PLECS)
-            </span>
-            <span class="inline-flex items-center gap-1.5">
-              <span class="inline-block w-4 h-0.5" style="background-color: #3b82f6;"></span>
-              Agent-generated fixed-point RTL
-            </span>
-            <span class="text-neutral-400">&mdash; the same colour code is used in every figure on this page.</span>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <img src="/agentic-hil/buck_ieee_zoom.png"
+              alt="Buck steady state: PLECS against the three numerical formulations"
+              class="w-full rounded-lg border border-black/5" />
+            <img src="/agentic-hil/boost_ieee_zoom.png"
+              alt="Boost steady state: PLECS against the three numerical formulations"
+              class="w-full rounded-lg border border-black/5" />
+          </div>
+          <figcaption class="text-xs text-neutral-500">
+            Steady state over the last three switching cycles, buck on the left and boost on the
+            right. The commercial reference (PLECS) and the three formulations the agent
+            cross-checks against each other, state-space with forward Euler, with backward Euler,
+            and ADC+MNA, are indistinguishable at this scale: 0.19 mV apart on buck, 2.98 mV on
+            boost. The buck trace touching zero is the discontinuous conduction the solver has to
+            model explicitly.
           </figcaption>
         </figure>
       </section>
